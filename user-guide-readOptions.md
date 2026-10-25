@@ -454,8 +454,6 @@ Aliasing simplifies JSON output by converting fully qualified Java class names i
     - The classes referenced in the JSON are not available in your JVM
     - You need to perform operations on the raw JSON data structure
 
-    Where the classes are on the classpath, each object's values are read as its class declares them, as Java mode reads them -- an `int` field an Integer, a `Date` field a Date, an enum its constant -- the root's and every object's below it, each typed by its `@type` or else by the type declared for it (a field's, a list's or array's element type, a map's key and value types, a generic class's type arguments). A JSON number or text in an array or list stays as JSON gives it. A typed tree written back with the options it was written with gives that text back.
-
 - **returnAsJavaObjects()**: This is the default mode, where JSON is fully converted to Java objects of the specified target types. This provides a direct mapping between JSON and your domain model.
 
 Example with JsonObjects mode:

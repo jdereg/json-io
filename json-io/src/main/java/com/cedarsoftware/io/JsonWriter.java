@@ -2223,14 +2223,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeNumberField(idKey, jObj.id);
         }
 
-        // Its class declares its values' types, whether its @type is written or left to its holder's declaration: a
-        // value of its field's type is written without one, as that object's field is
-        Class<?> type = jObj.getType() != null ? jObj.getRawType() : null;
+        Class<?> type = null;
         if (showType) {
             String typeName = getTypeNameForOutput(jObj);
             if (typeName != null) {
                 String alias = writeOptions.getTypeNameAlias(typeName);
                 gen.writeStringFieldUnescaped(typeKey, alias);
+                type = jObj.getRawType();
             }
         }
 
@@ -2257,14 +2256,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             } else if (value instanceof Boolean) {
                 gen.writeBoolean((Boolean) value);
-            } else if (value instanceof Long && writeLongsAsStrings && longFieldKind(type, fieldName) != 0) {
-                // as the object's field is written under writeLongsAsStrings: a long field's value as text, one of a
-                // wider type (Object, Number) with its type, so the text reads back as a Long
-                if (longFieldKind(type, fieldName) == LONG_FIELD) {
-                    gen.writeString(value.toString());
-                } else {
-                    writeImpl(value, true);
-                }
             } else if (value instanceof Number) {
                 gen.writeNumber(Writers.numberText((Number) value));   // its toString() form, a double's the same on every JDK
             } else if (value instanceof String) {
@@ -2295,26 +2286,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             jObj.id = idx;
         }
         return idx > 0 && jObj.hasId();
-    }
-
-    private static final int LONG_FIELD = 1;
-    private static final int WIDER_FIELD = 2;
-
-    /**
-     * What {@code type} (null: none known) declares {@code fieldName}: {@link #LONG_FIELD} a long or Long,
-     * {@link #WIDER_FIELD} a type a Long is one of (Object, Number), 0 another type or no such field.
-     */
-    private int longFieldKind(Class<?> type, String fieldName) {
-        if (type == null) {
-            return 0;
-        }
-        Field field = writeOptions.getDeepDeclaredFields(type).get(fieldName);
-        if (field == null) {
-            return 0;
-        }
-        Class<?> declared = field.getType();
-        return declared == long.class || declared == Long.class ? LONG_FIELD
-                : declared.isAssignableFrom(Long.class) ? WIDER_FIELD : 0;
     }
 
     // Hopefully this method goes away when the converters are done.

@@ -202,18 +202,15 @@ public class MapResolver extends Resolver {
 
         // Check if this is @keys/@items format (complex keys) or regular String-key format
         Object[] complexKeys = jsonObj.getKeys();  // Returns null for regular POJOs
-        Type valueType = jsonObj.getItemElementType();      // as declared for the map, where it was
         if (complexKeys != null) {
             // @keys/@items format - traverse keys and items arrays for @ref patching
             Object[] items = jsonObj.getItems();
             if (items != null) {
-                typeAll(complexKeys, jsonObj.getMapKeyType());
-                typeAll(items, valueType);
                 traverseArrayForRefs(complexKeys);
                 traverseArrayForRefs(items);
             }
         } else {
-            // Regular String-key Map - use traverseFields to patch @refs in values (and type them, where declared)
+            // Regular String-key Map - use traverseFields to patch @refs in values
             traverseFields(jsonObj);
         }
 
@@ -377,26 +374,6 @@ public class MapResolver extends Resolver {
         if (target != null) {
             // (an object of a class built from its parts is left unbuilt in this mode: its class types its fields)
             injectorMap = readOptions.getDeepInjectorMap(target == UNBUILT ? jsonObj.getRawType() : target.getClass());
-        } else {
-            // An object inside another -- its @type's or the type declared for it: its class types its fields, as the
-            // root's does (they were left as the JSON gave them: an int a Long, a Date a Long)
-            Class<?> typed = fieldsClass(jsonObj);
-            if (typed != null) {
-                injectorMap = readOptions.getDeepInjectorMap(typed);
-            }
-        }
-        if (injectorMap == null) {
-            // A map's values, as declared for it where they were (a Map<String, Point>), typed as Java mode reads them
-            Type valueType = jsonObj.getItemElementType();
-            if (valueType != null && valueType != Object.class) {
-                for (int i = 0, n = jsonObj.fastEntryCount(); i < n; i++) {
-                    Object value = jsonObj.fastValueAt(i);
-                    Object typed = typeElement(value, valueType);
-                    if (typed != value) {
-                        jsonObj.fastSetValueAt(i, typed);
-                    }
-                }
-            }
         }
 
         // By index, through the allocation-free accessors: this loop runs for every object a Maps-mode read builds,
@@ -415,11 +392,6 @@ public class MapResolver extends Resolver {
             // Pre-cache class and injector to avoid repeated lookups
             final Class<?> rhsClass = rhs.getClass();
             final Injector injector = (injectorMap == null || fieldName == null) ? null : injectorMap.get(fieldName);
-
-            if (injector != null && (rhs instanceof Object[] || rhs instanceof List)) {
-                // Its elements typed as the field declares, as Java mode reads them (an object's below)
-                typeContents(rhs, declaredType(injector, jsonObj));
-            }
 
             if (rhs instanceof List) {
                 // A TOON list: its @refs patched in it, then on as any other value
@@ -446,8 +418,6 @@ public class MapResolver extends Resolver {
                         jsonObj.fastSetValueAt(i, value);   // Direct update - avoids indexOf() lookup
                         continue;
                     }
-                    // The object, and what it holds, typed as the field declares, as Java mode reads them
-                    typeContents(jObj, declaredType(injector, jsonObj));
                 }
                 JsonObject refObject = resolveReference(jObj);
                 if (refObject != null) {    // Correct field references
@@ -471,11 +441,8 @@ public class MapResolver extends Resolver {
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
-                // Performance: Skip conversion if field type is Object or already matches. A TOON list where an
-                // array or collection is declared stays a list, as JSON's array stays an Object[] (its elements typed
-                // above): the Converter's copy was lost or threw (an array of objects), in every case
-                if (fieldType == Object.class || rhsClass == fieldType || (rhs instanceof Collection
-                        && (fieldType.isArray() || Collection.class.isAssignableFrom(fieldType)))) {
+                // Performance: Skip conversion if field type is Object or already matches
+                if (fieldType == Object.class || rhsClass == fieldType) {
                     continue;
                 }
                 // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
@@ -529,215 +496,6 @@ public class MapResolver extends Resolver {
      * name ({@link #convertValue}). The Converter read such a map as a constant named "value", or from a null. Null
      * when {@code type} is no enum or the object holds neither.
      */
-    /**
-     * The class whose fields type {@code jsonObj}'s entries: its own type's (an {@code @type}, or the type declared for
-     * it), where that is a class of fields -- not a map, collection, array, value type or JsonObject. Null otherwise.
-     */
-    private Class<?> fieldsClass(JsonObject jsonObj) {
-        Class<?> raw = jsonObj.getRawType();
-        return isClassOfFields(raw) ? raw : null;
-    }
-
-    /** A class whose objects are written as their fields: not a map, collection, array, interface or value type. */
-    private boolean isClassOfFields(Class<?> raw) {
-        return raw != null && (kindOf(raw) & CLASS_OF_FIELDS) != 0;
-    }
-
-    /** A non-referenceable class (a value type). */
-    private boolean isValueClass(Class<?> raw) {
-        return (kindOf(raw) & VALUE_CLASS) != 0;
-    }
-
-    private static final byte CLASS_OF_FIELDS = 1;
-    private static final byte VALUE_CLASS = 2;
-
-    // The last eight classes asked about, and what each is: a read meets a few classes over and over, and the lookups
-    // (a ClassValue per ReadOptions) cost Maps mode a fifth of its reading where it typed every object. (Four slots
-    // missed every time where five classes take turns: an order, its lines, its customer, its map, the root.)
-    private final Class<?>[] kindClasses = new Class<?>[8];
-    private final byte[] kinds = new byte[8];
-    private int nextKind;
-
-    private byte kindOf(Class<?> raw) {
-        Class<?>[] classes = kindClasses;
-        for (int i = 0; i < classes.length; i++) {
-            if (classes[i] == raw) {
-                return kinds[i];
-            }
-        }
-        boolean value = readOptions.isNonReferenceableClass(raw);
-        boolean ofFields = !value && raw != Object.class && raw != JsonObject.class && !raw.isArray()
-                && !raw.isInterface() && !Map.class.isAssignableFrom(raw) && !Collection.class.isAssignableFrom(raw);
-        byte kind = (byte) ((ofFields ? CLASS_OF_FIELDS : 0) | (value ? VALUE_CLASS : 0));
-        int slot = nextKind++ & (classes.length - 1);
-        classes[slot] = raw;
-        kinds[slot] = kind;
-        return kind;
-    }
-
-    /** {@code injector}'s field's type, its type variables resolved by {@code holder}'s type where that gives them. */
-    private Type declaredType(Injector injector, JsonObject holder) {
-        Type generic = injector.getGenericType();
-        if (generic instanceof Class) {
-            return generic;
-        }
-        Type holderType = holder.getType();
-        if (holderType instanceof java.lang.reflect.ParameterizedType) {
-            Type resolved = TypeUtilities.resolveType(holderType, generic);
-            if (!TypeUtilities.hasUnresolvedType(resolved)) {
-                return resolved;
-            }
-        }
-        // the field's own: asked once per field a run (a List<Line> field's answer for each of a list's objects)
-        Injector[] injectors = typedInjectors;
-        for (int i = 0; i < injectors.length; i++) {
-            if (injectors[i] == injector) {
-                return injectorTypes[i];
-            }
-        }
-        Type type = TypeUtilities.hasUnresolvedType(generic) ? injector.getType() : generic;
-        int slot = nextInjector++ & (injectors.length - 1);
-        injectors[slot] = injector;
-        injectorTypes[slot] = type;
-        return type;
-    }
-
-    // The last eight fields asked for their type with no type arguments to resolve it by, and those types
-    private final Injector[] typedInjectors = new Injector[8];
-    private final Type[] injectorTypes = new Type[8];
-    private int nextInjector;
-
-    /**
-     * Types what {@code value} holds by {@code declared}, the type declared for it, as Java mode reads it: an object
-     * the JSON gives no type takes it, a map or collection learns its keys', values' or elements' types, and an
-     * array's (or TOON list's) elements are typed by its element type -- an object, a container in turn, a typed value
-     * ({"@type":"Date",..}) its value.
-     */
-    private void typeContents(Object value, Type declared) {
-        if (declared == null || declared == Object.class) {
-            return;
-        }
-        if (value instanceof JsonObject) {
-            JsonObject obj = (JsonObject) value;
-            if (obj.isReference()) {
-                return;
-            }
-            Type type = obj.getType();
-            if ((type == null || type == Object.class) && isClassOfFields(TypeUtilities.getRawClass(declared))) {
-                // (a map, collection or array learns only what it holds: written back as it was read)
-                obj.setType(declared);
-            }
-            seedContainer(obj, declared);
-            return;
-        }
-        Type element = elementType(declared);
-        if (element == null || element == Object.class) {
-            return;
-        }
-        if (value instanceof Object[]) {
-            Object[] array = (Object[]) value;
-            for (int i = 0; i < array.length; i++) {
-                array[i] = typeElement(array[i], element);
-            }
-        } else if (value instanceof List) {
-            List<Object> list = (List<Object>) value;
-            for (int i = 0, len = list.size(); i < len; i++) {
-                Object item = list.get(i);
-                Object typed = typeElement(item, element);
-                if (typed != item) {
-                    list.set(i, typed);
-                }
-            }
-        }
-    }
-
-    /** An element (or map value or key) of {@code declared} type, typed: the value to keep in its place. */
-    private Object typeElement(Object element, Type declared) {
-        if (element == null || declared == null || declared == Object.class) {
-            return element;
-        }
-        if (element instanceof JsonObject) {
-            JsonObject obj = (JsonObject) element;
-            Class<?> raw = TypeUtilities.getRawClass(declared);
-            if (!obj.isReference() && raw != null && isValueClass(raw)) {
-                // a typed value ({"@type":"Date","date":..} in a List<Date>): the value, as a field's
-                Object value = obj.isFinished() ? obj.getTarget() : nonRefValue(obj, raw);
-                obj.setFinishedTarget(value, true);
-                return value;
-            }
-            typeContents(obj, declared);
-            return obj;
-        }
-        if (element instanceof Object[] || element instanceof List) {
-            typeContents(element, declared);
-        }
-        // (a JSON value -- a number, text -- stays as JSON gives it, as an array's or a list's did at the root: written
-        // back in the array, it carries no declared type to write it by)
-        return element;
-    }
-
-    /** What a {@code declared} map or collection holds (its keys', values', elements' types), told to {@code obj}. */
-    private static void seedContainer(JsonObject obj, Type declared) {
-        if (declared instanceof Class) {
-            Class<?> c = (Class<?>) declared;
-            if (c.isArray() && obj.getItemElementType() == null) {
-                obj.setItemElementType(c.getComponentType());
-            }
-            return;
-        }
-        if (!(declared instanceof java.lang.reflect.ParameterizedType)) {
-            return;
-        }
-        Class<?> raw = TypeUtilities.getRawClass(declared);
-        Type[] args = ((java.lang.reflect.ParameterizedType) declared).getActualTypeArguments();
-        if (raw == null || obj.getItemElementType() != null) {
-            return;
-        }
-        if (Map.class.isAssignableFrom(raw)) {
-            if (obj.getMapKeyType() == null) {
-                Type keyType = mapKeyType(declared, args);
-                if (keyType != null) {
-                    obj.setMapKeyType(keyType);
-                }
-            }
-            Type valueType = mapValueType(declared, args);
-            if (valueType != null) {
-                obj.setItemElementType(valueType);
-            }
-        } else if (Collection.class.isAssignableFrom(raw) && args.length >= 1) {
-            obj.setItemElementType(collectionElementType(declared, args));
-        }
-    }
-
-    /** Each of {@code items} typed as {@code declared}, where that is known. */
-    private void typeAll(Object[] items, Type declared) {
-        if (items == null || declared == null || declared == Object.class) {
-            return;
-        }
-        for (int i = 0; i < items.length; i++) {
-            items[i] = typeElement(items[i], declared);
-        }
-    }
-
-    /** The type of what an array or collection of {@code declared} type holds; null where it is not known. */
-    private static Type elementType(Type declared) {
-        if (declared instanceof Class) {
-            Class<?> c = (Class<?>) declared;
-            return c.isArray() ? c.getComponentType() : null;
-        }
-        if (declared instanceof GenericArrayType) {
-            return ((GenericArrayType) declared).getGenericComponentType();
-        }
-        if (declared instanceof java.lang.reflect.ParameterizedType) {
-            Class<?> raw = TypeUtilities.getRawClass(declared);
-            Type[] args = ((java.lang.reflect.ParameterizedType) declared).getActualTypeArguments();
-            if (raw != null && Collection.class.isAssignableFrom(raw) && args.length >= 1) {
-                return collectionElementType(declared, args);
-            }
-        }
-        return null;
-    }
-
     /**
      * The value a typed object holds for a field of a non-referenceable class: by the object's own {@code @type} where
      * that is more exact (a Timestamp in a Date field, a BigDecimal in a Number field) and the Converter makes it,
@@ -835,13 +593,6 @@ public class MapResolver extends Resolver {
         if (ArrayUtilities.isEmpty(items)) {
             return;
         }
-        // as declared for the array, where it was, else as its own type says ({"@type":"[LPoint;"} in an Object field)
-        Type itemType = jsonObj.getItemElementType();
-        if (itemType == null) {
-            Class<?> own = jsonObj.getRawType();
-            itemType = own != null && own.isArray() ? own.getComponentType() : null;
-        }
-        typeAll(items, itemType);
 
         Object target = jsonObj.getTarget() != null ? jsonObj.getTarget() : items;
         Class<?> componentType = getArrayComponentType(jsonObj);
@@ -985,7 +736,6 @@ public class MapResolver extends Resolver {
         }
 
         Object[] items = jsonObj.getItems();
-        typeAll(items, jsonObj.getItemElementType());       // as declared for the collection, where it was
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
         if (col == null) {
             col = (Collection<Object>) createInstance(jsonObj);
