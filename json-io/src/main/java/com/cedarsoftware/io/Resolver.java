@@ -2192,9 +2192,7 @@ public abstract class Resolver {
         // A map is filled at the end of the read (rehashMaps), but a creator is given its argument now: the maps read
         // for it are filled now too, else it saw them empty (Map.copyOf(m), a sum over m). Read through to the end,
         // their keys are complete; the end fills them again, with what references resolved later give.
-        for (int i = pendingMaps, n = mapsToRehash.size(); i < n; i++) {
-            mapsToRehash.get(i).rehashMaps();
-        }
+        fillMaps(pendingMaps);
         return argument;
     }
 
@@ -2552,12 +2550,75 @@ public abstract class Resolver {
      * and you would need to provide a custom reader for that set.
      */
     private void rehashMaps() {
-        if (mapsToRehash.isEmpty()) {
+        fillMaps(0);
+    }
+
+    /**
+     * Fills the maps queued from {@code from} on, each after the maps it holds as keys, so that it hashes them full. A
+     * map's keys are read inside it, so are queued after it: filled in queue order, it hashed two keys not yet filled
+     * as equal (empty), one entry for both, and a {@code Map<Map<..>, ..>} of two keys read back with one (4.117.0
+     * too). Where no map has a map as a key, the order is the queue's, as before.
+     */
+    private void fillMaps(int from) {
+        int n = mapsToRehash.size();
+        int i = from;
+        while (i < n && !hasMapKey(mapsToRehash.get(i))) {
+            i++;
+        }
+        if (i == n) {
+            for (int j = from; j < n; j++) {
+                mapsToRehash.get(j).rehashMaps();
+            }
             return;
         }
-        for (JsonObject jsonObj : mapsToRehash) {
-            jsonObj.rehashMaps();
+        // The queued maps by the map each fills: what its holder has among its keys by then
+        Map<Object, JsonObject> queued = new IdentityHashMap<>();
+        for (int j = from; j < n; j++) {
+            JsonObject map = mapsToRehash.get(j);
+            if (map.getTarget() != null) {
+                queued.put(map.getTarget(), map);
+            }
         }
+        // Depth first without recursion (a chain of maps, each the key of the next, may be as long as the document): a
+        // map is filled when it is met again, its key maps filled above it. Marked when first met, so a map that is
+        // its own key, or a ring of them, ends.
+        Set<JsonObject> met = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<JsonObject> filled = Collections.newSetFromMap(new IdentityHashMap<>());
+        Deque<JsonObject> stack = new ArrayDeque<>();
+        for (int j = from; j < n; j++) {
+            stack.push(mapsToRehash.get(j));
+            while (!stack.isEmpty()) {
+                JsonObject map = stack.peek();
+                if (met.add(map)) {
+                    Object[] keys = map.getKeys();
+                    if (keys != null) {
+                        for (Object key : keys) {
+                            JsonObject keyMap = key instanceof Map ? queued.get(key) : null;
+                            if (keyMap != null && !met.contains(keyMap)) {
+                                stack.push(keyMap);
+                            }
+                        }
+                    }
+                } else {
+                    stack.pop();
+                    if (filled.add(map)) {
+                        map.rehashMaps();
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean hasMapKey(JsonObject map) {
+        Object[] keys = map.getKeys();
+        if (keys != null) {
+            for (Object key : keys) {
+                if (key instanceof Map) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean valueToTarget(JsonObject jsonObject) {
