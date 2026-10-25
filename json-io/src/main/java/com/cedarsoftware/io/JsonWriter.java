@@ -357,6 +357,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private IdentityIntMap objsReferenced;
     // Active path tracking for cycle detection when cycleSupport=false
     private Map<Object, Boolean> activePath;
+    // The POJO collection elements on the path, which writeCollectionElement writes past it (cycleSupport=false):
+    // counted toward maxObjectGraphDepth with it
+    private int elementDepth;
     private final Writer out;
     /**
      * Generator wrapping {@link #out} for the same {@link #writeOptions}. Owns
@@ -911,6 +914,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             if (objVisited != null) { objVisited.clear(); }
             if (objsReferenced != null) { objsReferenced.clear(); }
             if (activePath != null) { activePath.clear(); }
+            elementDepth = 0;
         }
     }
 
@@ -929,7 +933,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             throw cycleDetected(obj);
         }
         activePath.put(obj, Boolean.TRUE);
-        if (activePath.size() - 1 > traceMaxDepth) {
+        if (activePath.size() + elementDepth - 1 > traceMaxDepth) {
             throw tooDeep(traceMaxDepth);
         }
     }
@@ -2662,9 +2666,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 // needed — the outer state at gen.depth is preserved across the call.
                 // writeUsingCustomWriter (its writeCustom internal reset) operates at
                 // gen.depth=0 and doesn't touch contextStack[outer-depth].
+                // Counted toward maxObjectGraphDepth, as writeImpl's active path counts what it writes: uncounted, a
+                // graph through lists counted half the depth the trace (cycleSupport(true)) counts. (Reset with the
+                // path at the end of the write, so no finally.)
+                if (activePath.size() + ++elementDepth - 1 > traceMaxDepth) {
+                    throw tooDeep(traceMaxDepth);
+                }
                 if (!writeUsingCustomWriter(o, showType, out)) {
                     writeObject(o, showType, false);
                 }
+                elementDepth--;
             } else {
                 writeImpl(o, showType);
             }
