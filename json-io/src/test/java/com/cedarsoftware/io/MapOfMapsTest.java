@@ -125,20 +125,21 @@ class MapOfMapsTest
         Point p1 = pointMap.getPoints().get(new Point(10, 20));
         assertTrue(p1.getX() == 1 && p1.getY() == 2);
 
-        // Comes in as a Map [[x:20, y:20]:[x:1, y:2]] when read as Map of maps.  This is due to a Point (non simple type)
-        // being the key of the map.
+        // Comes in as a Map [[x:10, y:20]:[x:1, y:2]] when read as Map of maps: a Point (non simple type) is the key.
+        // Each is typed as its declared Point, its int fields Integers, as Java mode reads them (they were Longs).
         Map map = TestUtil.toMaps(json, null).asClass(null);
         Map points = (Map) map.get("points");
         assertEquals(1, map.size());
         Map ten20 = (Map) points.keySet().iterator().next();
         assert ten20 instanceof Map;
-        assert ten20.get("x").equals(10L);
-        assert ten20.get("y").equals(20L);
+        assertEquals(10, ten20.get("x"));
+        assertEquals(20, ten20.get("y"));
+        assertEquals(Point.class, ((JsonObject) ten20).getRawType());
 
         Map one2 = (Map) points.values().iterator().next();
         assert one2 instanceof Map;
-        assert one2.get("x").equals(1L);
-        assert one2.get("y").equals(2L);
+        assertEquals(1, one2.get("x"));
+        assertEquals(2, one2.get("y"));
     }
 
     @Test

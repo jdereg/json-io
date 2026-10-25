@@ -246,7 +246,8 @@ class RefsTest
         JsonObject kid6 = (JsonObject) children[5];
         assert kid6 != kid5;
         Object date = jsonObj.get("date");
-        assert kid6.get("date").equals("2023/11/17");
+        // typed as its declared class, as the root is: its date a LocalDate, as Java mode reads it (it was the text)
+        assert kid6.get("date").equals(LocalDate.of(2023, 11, 17));
     }
 
     @Test
