@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
@@ -163,18 +163,13 @@ class MapsModeReadTest {
         return (Map<?, ?>) JsonIo.fromToonToMaps(JsonIo.toToon(o, options), null).asClass(null);
     }
 
-    /** A value Maps mode reads with its type stays an object holding it ({"@type":..,"value":..}). */
-    private static Object valueOf(Object o) {
-        return o instanceof JsonObject ? ((JsonObject) o).getValue() : o;
-    }
-
     @Test
     void enumsWrittenByTheirValueOrAsObjects() {
         List<Map<?, ?>> reads = Arrays.asList(json(new Bag(), null), json(new Bag(), ALWAYS),
                 json(new Bag(), ENUM_OBJECTS), toon(new Bag(), MINIMAL), toon(new Bag(), ALWAYS));
         for (Map<?, ?> bag : reads) {
-            assertEquals(Code.GREEN, valueOf(bag.get("code")));
-            assertEquals(Plain.B, valueOf(bag.get("plain")));
+            assertEquals(Code.GREEN, bag.get("code"));     // the value, also where it was written with its type
+            assertEquals(Plain.B, bag.get("plain"));
             assertEquals(Code.RED, bag.get("any"));
         }
         // An array the JSON types: its elements are read as its component type, also where its type follows them
@@ -211,8 +206,8 @@ class MapsModeReadTest {
     @Test
     void aNanInANumberField() {
         for (Map<?, ?> num : Arrays.asList(json(new Num(), null), json(new Num(), ALWAYS))) {
-            assertInstanceOf(JsonObject.class, num.get("nan"));
-            assertNull(valueOf(num.get("nan")));
+            assertTrue(num.containsKey("nan"));
+            assertNull(num.get("nan"));     // the value, as Java mode reads it (no longer an object holding it)
         }
     }
 

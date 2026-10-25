@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -407,13 +408,14 @@ public class MapResolver extends Resolver {
                     final Class<?> injectorType = injector.getType();
                     boolean isNonRefClass = readOptions.isNonReferenceableClass(injectorType);
                     if (isNonRefClass) {
-                        Object value = jObj.getValue();
-                        Object enumConstant = enumOfJsonObject(jObj, injectorType);
-                        // (a null the Converter has no value for stays null: a Number field's {"@type":"Float",
-                        // "value":null}, a NaN where JSON has none, is null, as Java mode reads it)
-                        jObj.setValue(enumConstant != null ? enumConstant
-                                : value == null && !converter.isConversionSupportedFor(Void.class, injectorType) ? null
-                                : converter.convert(value, injectorType));
+                        // The value itself, as Java mode reads it and as the field holds it when written untyped
+                        // (it stayed the typed object, holding the value -- or, for a date's map form, a stray null).
+                        // A @ref names the object it refers to (a class declared non-referenceable for the read
+                        // only may be written with @id): one value for both, as Java mode reads them.
+                        JsonObject held = jObj.isReference() ? resolveReference(jObj) : jObj;
+                        Object value = held.isFinished() ? held.getTarget() : nonRefValue(held, injectorType);
+                        held.setFinishedTarget(value, true);
+                        jsonObj.fastSetValueAt(i, value);   // Direct update - avoids indexOf() lookup
                         continue;
                     }
                 }
@@ -494,6 +496,45 @@ public class MapResolver extends Resolver {
      * name ({@link #convertValue}). The Converter read such a map as a constant named "value", or from a null. Null
      * when {@code type} is no enum or the object holds neither.
      */
+    /**
+     * The value a typed object holds for a field of a non-referenceable class: by the object's own {@code @type} where
+     * that is more exact (a Timestamp in a Date field, a BigDecimal in a Number field) and the Converter makes it,
+     * else by the field's; an enum by its name or value; a date's map form ({"@type":"Date","date":..}) as the
+     * Converter reads it. A null the Converter has no value for stays null: a Number field's
+     * {"@type":"Float","value":null}, a NaN where JSON has none, is null, as Java mode reads it.
+     */
+    private Object nonRefValue(JsonObject jObj, Class<?> fieldType) {
+        boolean valueForm = jObj.hasValue();
+        Object value = valueForm ? jObj.getValue() : null;
+        Class<?> type = fieldType;
+        Class<?> own = jObj.getRawType();
+        if (own != null && Enum.class.isAssignableFrom(own)) {
+            own = ClassUtilities.getClassIfEnum(own);      // a constant with a body is of its enum
+        }
+        if (own != null && own != fieldType && fieldType.isAssignableFrom(own)
+                && converter.isConversionSupportedFor(value == null ? Map.class : value.getClass(), own)) {
+            type = own;
+        }
+        Object enumConstant = enumOfJsonObject(jObj, type);
+        if (enumConstant != null) {
+            return enumConstant;
+        }
+        // An ISO date's text -- its value, or the one entry of its map form ({"@type":"Instant","instant":".."}) --
+        // by the strict parser, as a field's bare text is read: the Converter's general parse costs up to 20 times
+        Object text = valueForm ? value : jObj.fastEntryCount() == 1 ? jObj.fastValueAt(0) : null;
+        if (text instanceof String) {
+            Object parsed = FastIsoParser.parse((String) text, type);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+        if (!valueForm && converter.isConversionSupportedFor(Map.class, type)) {
+            return converter.convert(resolveTypedValues(jObj), type);
+        }
+        return value == null && !converter.isConversionSupportedFor(Void.class, type) ? null
+                : converter.convert(value, type);
+    }
+
     private Object enumOfJsonObject(JsonObject jsonObj, Class<?> type) {
         if (!Enum.class.isAssignableFrom(type)) {
             return null;
