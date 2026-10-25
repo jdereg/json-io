@@ -1,5 +1,8 @@
 package com.cedarsoftware.io.factory;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.Optional;
 
 import com.cedarsoftware.io.ClassFactory;
@@ -29,6 +32,12 @@ public class OptionalFactory implements ClassFactory {
 
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        if (!isPresentValueForm(jObj)) {
+            // The content written in the Optional's place -- {"x":6} for an Optional<P>, as Jackson writes it and as
+            // json-io does where it writes no type (showTypeInfoNever(), standardJson()): one of the type it holds.
+            // It read as empty.
+            return Optional.of(contentOf(jObj, resolver));
+        }
         Object value = jObj.get("value");
 
         if (value == null) {
@@ -51,6 +60,32 @@ public class OptionalFactory implements ClassFactory {
         }
 
         return Optional.of(value);
+    }
+
+    /**
+     * True for the form json-io writes under {@code writeOptionalAsObject()} (and for an Optional among the items of a
+     * list it types): {"present":..}, with at most "value" beside it -- or "value" alone.
+     */
+    private static boolean isPresentValueForm(JsonObject jObj) {
+        int size = jObj.size();
+        boolean hasValue = jObj.containsKey("value");
+        if (jObj.containsKey("present")) {
+            return size == 1 || size == 2 && hasValue;
+        }
+        return size == 1 && hasValue;
+    }
+
+    /** An object written in the Optional's place: of the type the Optional holds, a map where that is not known. */
+    private static Object contentOf(JsonObject jObj, Resolver resolver) {
+        Type type = jObj.getType();
+        Type held = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[0]
+                : Object.class;
+        JsonObject content = new JsonObject();
+        content.setType(held);
+        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
+            content.put(entry.getKey(), entry.getValue());
+        }
+        return resolver.toJava(held, content);
     }
 
     @Override
