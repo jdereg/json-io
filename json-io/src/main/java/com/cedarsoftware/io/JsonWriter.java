@@ -10,6 +10,8 @@ import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
@@ -80,6 +82,7 @@ import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.CompactSet;
 import com.cedarsoftware.util.FastWriter;
 import com.cedarsoftware.util.IOUtilities;
+import com.cedarsoftware.util.TypeUtilities;
 
 import static com.cedarsoftware.io.JsonValue.ENUM;
 import static com.cedarsoftware.io.JsonValue.ITEMS;
@@ -392,6 +395,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // For Maps with non-String keys written as @keys/@items arrays, declaredKeyType tracks the key type.
     private Class<?> declaredElementType = null;
     private Class<?> declaredKeyType = null;
+    // A parameterized element type (List<Point> for a List<List<Point>> field), else null: what a container among the
+    // elements (a map's values) declares in turn, so its elements are written as declared too. Not for keys: no reader
+    // reads the elements of a key container (a Map<List<Point>, ..>'s) by its type arguments
+    private Type declaredElementGeneric = null;
     // Per-field @IoShowType — forces @type emission on elements within a container field
     private boolean forceElementShowType = false;
     // Per-field format pattern from @IoFormat / @JsonFormat — set during writeField(), cleared after
@@ -2389,7 +2396,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // "is this the first element?" check per element. The key and the value are read from the entry before
         // the iterator moves on (some maps hand out the same entry object again and again).
         Iterator<Map.Entry<?, ?>> i = ((Map) map).entrySet().iterator();
+        final Type savedValueGeneric = declaredElementGeneric;
         declaredElementType = declaredKeyType;
+        declaredElementGeneric = null;      // a container among the keys keeps its types
         if (i.hasNext()) {
             Map.Entry<?, ?> entry = i.next();
             values[count++] = entry.getValue();
@@ -2414,6 +2423,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         gen.beginInlineArrayBody();
 
         declaredElementType = savedValueType;
+        declaredElementGeneric = savedValueGeneric;
         if (count > 0) {
             writeCollectionElement(values[0]);
             for (int n = 1; n < count; n++) {
@@ -2694,6 +2704,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @throws IOException if an error occurs writing to the output stream.
      */
     private void writeCollectionElement(Object o) throws IOException {
+        if (declaredElementGeneric != null && (o instanceof Collection || o instanceof Map) && naturalDefaults) {
+            writeDeclaredContainer(o);
+            return;
+        }
         if (o == null) {
             out.write("null");
         } else if (o instanceof Boolean || o instanceof Double) {
@@ -2754,6 +2768,40 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             } else {
                 writeImpl(o, showType);
             }
+        }
+    }
+
+    /**
+     * A container where its holder's elements are declared a parameterized container ({@code List<Point>} in a
+     * {@code List<List<Point>>}): written as an element of that declared class -- an ArrayList, its natural default,
+     * without its @type -- and what it holds as its type arguments declare, as a field's container is, Jackson's
+     * {@code [[{..}]]}. The @type of both was written ({"@type":"ArrayList","@items":[{"@type":"Point",..}]}).
+     * Minimal and minimal plus only: showTypeInfoMinimalLegacy() keeps 4.112.0's text.
+     */
+    private void writeDeclaredContainer(Object o) throws IOException {
+        final Type generic = declaredElementGeneric;
+        final Class<?> savedElementType = declaredElementType;
+        final Class<?> savedKeyType = declaredKeyType;
+        try {
+            declaredElementType = TypeUtilities.getRawClass(generic);
+            boolean showType = shouldShowTypeForElement(o.getClass());
+            Type[] args = ((ParameterizedType) generic).getActualTypeArguments();
+            Type element;
+            if (o instanceof Map) {
+                Type key = Resolver.mapKeyType(generic, args);
+                declaredKeyType = key instanceof Class ? (Class<?>) key : null;
+                element = Resolver.mapValueType(generic, args);
+            } else {
+                declaredKeyType = null;
+                element = Resolver.collectionElementType(generic, args);
+            }
+            declaredElementType = element instanceof Class ? (Class<?>) element : null;
+            declaredElementGeneric = element instanceof ParameterizedType ? element : null;
+            writeImpl(o, showType);
+        } finally {
+            declaredElementType = savedElementType;
+            declaredKeyType = savedKeyType;
+            declaredElementGeneric = generic;
         }
     }
 
@@ -3117,12 +3165,17 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         Class<?> type = plan.effectiveDeclaredType();
         Class<?> savedElementType = declaredElementType;
         Class<?> savedKeyType = declaredKeyType;
+        Type savedElementGeneric = declaredElementGeneric;
         boolean savedForceElementShowType = forceElementShowType;
         String savedFormatPattern = fieldFormatPattern;
         try {
-            if (plan.applyDeclaredContainerTypes() && (o instanceof Collection || o instanceof Map)) {
+            if ((plan.applyDeclaredContainerTypes() || plan.elementGeneric() != null)
+                    && (o instanceof Collection || o instanceof Map)) {
                 declaredKeyType = plan.declaredKeyType();
                 declaredElementType = plan.declaredElementType();
+                declaredElementGeneric = plan.elementGeneric();
+            } else {
+                declaredElementGeneric = null;      // (a container not of this field's declaring)
             }
             if (plan.forceShowType()) {
                 forceElementShowType = true;
@@ -3157,6 +3210,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         } finally {
             declaredElementType = savedElementType;
             declaredKeyType = savedKeyType;
+            declaredElementGeneric = savedElementGeneric;
             forceElementShowType = savedForceElementShowType;
             fieldFormatPattern = savedFormatPattern;
         }

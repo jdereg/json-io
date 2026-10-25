@@ -3532,6 +3532,7 @@ public class WriteOptionsBuilder {
             Class<?> keyType = null;
             Class<?> elementClass = null;   // also from a parameterized argument: Map for List<Map<String, Object>>
             Class<?> keyClass = null;
+            Type elementGeneric = null;     // a parameterized argument itself: List<Point> for List<List<Point>>
             boolean applyContainerTypes = false;
             Class<?> declaringClass = accessor.getDeclaringClass();
 
@@ -3550,6 +3551,8 @@ public class WriteOptionsBuilder {
                     Type inferred = TypeUtilities.inferElementType(genericType, null);
                     if (inferred instanceof Class) {
                         elementType = (Class<?>) inferred;
+                    } else if (inferred instanceof ParameterizedType) {
+                        elementGeneric = inferred;
                     }
                     elementClass = rawClassOf(inferred);
                     applyContainerTypes = keyType != null || elementType != null;
@@ -3604,9 +3607,11 @@ public class WriteOptionsBuilder {
                     && Map.class.isAssignableFrom(fieldType)
                     && com.cedarsoftware.util.Converter.isSimpleTypeConversionSupported(keyType, String.class);
 
-            return new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
+            WriteFieldPlan plan = new WriteFieldPlan(accessor, fieldName, keyLiteral, fieldType, elementType, keyType,
                     enumSkip, applyContainerTypes, skipTrace, nullSkip, formatPat, effectiveType, forceType,
                     toonKeyQuote, simpleKeys, primitiveWriteKind(fieldType), elementClass, keyClass);
+            plan.elementGeneric = elementGeneric;
+            return plan;
         }
 
         private static byte primitiveWriteKind(Class<?> type) {
@@ -3704,6 +3709,14 @@ public class WriteOptionsBuilder {
 
         Class<?> elementClass() {
             return elementClass;
+        }
+
+        // A parameterized element type (List<Point> for a List<List<Point>> field), else null: what a container the
+        // field's container holds declares in turn
+        private Type elementGeneric;
+
+        Type elementGeneric() {
+            return elementGeneric;
         }
 
         Class<?> keyClass() {
