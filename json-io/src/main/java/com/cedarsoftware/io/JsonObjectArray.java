@@ -88,7 +88,12 @@ class JsonObjectArray extends JsonObject {
     // ========== Hash and Equals ==========
     // Items live on JsonObjectArray; equality must include the @items payload
     // in addition to any map-shape POJO data the parent already compares.
-    // See JsonObject: hashing is shallow, equality is deep and cycle-guarded.
+    // No map: it equals another of its class (see JsonObject). Its hash is shallow, its equality deep and cycle-guarded.
+
+    @Override
+    boolean isMapShaped() {
+        return false;
+    }
 
     @Override
     boolean storageEquals(JsonObject other) {
@@ -98,7 +103,7 @@ class JsonObjectArray extends JsonObject {
     @Override
     public int hashCode() {
         if (hash == null) {
-            int result = super.hashCode();
+            int result = shallowMapHash();
             result = 31 * result + itemsHash(itemsRef);
             hash = result;
         }

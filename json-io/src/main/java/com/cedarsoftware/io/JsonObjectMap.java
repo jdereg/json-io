@@ -326,36 +326,7 @@ class JsonObjectMap extends JsonObject {
     }
 
     // ========== Hash and Equals ==========
-    // See JsonObject: hashing is shallow, equality is deep and cycle-guarded.
-
-    @Override
-    boolean storageEquals(JsonObject obj) {
-        JsonObjectMap other = (JsonObjectMap) obj;
-        int len = size();
-        for (int i = 0; i < len; i++) {
-            if (!Objects.equals(keysRef[i], other.keysRef[i])) {
-                return false;
-            }
-            if (!Objects.equals(valuesRef[i], other.valuesRef[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        if (hash == null) {
-            int result = 1;
-            int len = size();
-            for (int i = 0; i < len; i++) {
-                result = 31 * result + shallowHash(keysRef[i]);
-                result = 31 * result + shallowHash(valuesRef[i]);
-            }
-            hash = result;
-        }
-        return hash;
-    }
+    // JsonObject's, through the fast accessors above: the Map contract over its @keys/@items entries.
 
     // ========== Resolution Support ==========
 

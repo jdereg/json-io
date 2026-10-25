@@ -28,12 +28,13 @@ class JsonObjectFamilyTest {
         assertFalse(array.equals(lite));
     }
 
+    /** Both are maps: equal with the same entries, as the Map contract has it (here none). */
     @Test
-    void liteNotEqualToMap_evenWhenContentMatches() {
+    void liteEqualsAMapWithTheSameEntries() {
         JsonObject lite = new JsonObject();
         JsonObjectMap map = new JsonObjectMap();
-        assertFalse(lite.equals(map));
-        assertFalse(map.equals(lite));
+        assertTrue(lite.equals(map));
+        assertTrue(map.equals(lite));
     }
 
     @Test

@@ -68,10 +68,14 @@ class JsonObjectCycleTest {
 
     @Test
     void aCyclicReadCanBeHashed() {
-        for (String json : new String[] {PARENT_CHILD, SELF, THROUGH_ARRAY}) {
+        for (String json : new String[] {PARENT_CHILD, SELF}) {
             Object root = JsonIo.toMaps(json).asClass(null);
             assertEquals(root.hashCode(), JsonIo.toMaps(json).asClass(null).hashCode(), json);
         }
+        // Its loop runs through an array, which a map hashes and compares by identity: two reads are not equal, and
+        // their hashes may differ; each is hashed, and the same each time
+        Object root = JsonIo.toMaps(THROUGH_ARRAY).asClass(null);
+        assertEquals(root.hashCode(), root.hashCode());
     }
 
     @Test
@@ -324,11 +328,14 @@ class JsonObjectCycleTest {
         assertNotEquals(a, b);
     }
 
+    /** As the Map contract has it: equal to any map with the same entries, and hashed as it is. */
     @Test
-    void aJsonObjectStillEqualsOnlyItsOwnShape() {
+    void aJsonObjectEqualsAnyMapWithTheSameEntries() {
         JsonObject lite = new JsonObject();
         lite.put("k", "v");
-        assertNotEquals(lite, Collections.singletonMap("k", "v"));
+        assertEquals(lite, Collections.singletonMap("k", "v"));
+        assertEquals(Collections.singletonMap("k", "v"), lite);
+        assertEquals(Collections.singletonMap("k", "v").hashCode(), lite.hashCode());
         assertNotEquals(lite, new JsonObjectMap());
     }
 

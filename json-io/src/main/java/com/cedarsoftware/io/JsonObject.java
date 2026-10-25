@@ -9,7 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -92,7 +94,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // boxed Integer: past the threshold, an object that was looked up paid for its arrays AND a HashMap.
     private transient int[] index;
 
-    // Cached values — package-private so subclasses can invalidate after their own mutations.
+    // Cached values — package-private so subclasses can invalidate after their own mutations. The hash is cached only
+    // by an object holding @items (JsonObjectArray): a map's hash is deep, so a nested change changes it.
     Integer hash;
     private String typeString;
     byte jsonTypeCache;
@@ -801,12 +804,19 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     // ========== Hash and Equals ==========
+    // A JsonObject is a Map, and as a map -- a plain object's fields, a map's entries, the @keys/@items of one with
+    // complex keys -- it follows the Map contract: it equals any Map with the same entries, in whatever order, and its
+    // hash is AbstractMap's (the sum of key-hash ^ value-hash), so a HashSet or HashMap finds it by an equal
+    // LinkedHashMap and the other way round. A value is compared by its equals(): a JSON array, an Object[], by
+    // identity, as in any Map (DeepEquals compares trees by content). An object holding @items (JsonObjectArray) is
+    // no map: it equals another of its class, its items compared by content, as before.
+    //
     // A JsonObject graph read with @ref is routinely CYCLIC -- a child's "parent" is its parent, a ring's last "next"
     // is its first -- so neither method may walk the graph unguarded.
     //
-    // hashCode() is shallow: this object's own keys and leaf values, and only the KIND of a nested map, collection,
-    // array or JsonObject. It never descends, so it cannot loop, and because nothing nested is folded in, a nested
-    // object changing after this hash was cached cannot make it disagree with equals().
+    // hashCode() is deep where no cycle is reachable -- so it is any equal map's -- and where one is, the sum of this
+    // object's own entries hashed shallowly (a nested map, collection or array by its kind). Two equal graphs are both
+    // cyclic or both not, so equal maps still hash alike. It is not cached: a nested value changing changes it.
     //
     // equals() is deep: every nested value is compared. A pair this comparison has already taken as equal -- one
     // still being compared further up, or one already found equal -- is taken as equal again. That is how a loop
@@ -824,18 +834,157 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // The pairs the comparison running on this thread has taken as equal. Present only during a comparison.
     private static final ThreadLocal<Comparison> COMPARISON = new ThreadLocal<>();
 
+    /** True for a map: false for an object holding @items (an array or a collection). */
+    boolean isMapShaped() {
+        return true;
+    }
+
     @Override
     public int hashCode() {
-        if (hash == null) {
-            int result = 1;
-            int len = size();
-            for (int i = 0; i < len; i++) {
-                result = 31 * result + shallowHash(keys[i]);
-                result = 31 * result + shallowHash(data[i]);
-            }
-            hash = result;
+        try {
+            return quickHash(this, new int[] {QUICK_HASH_BUDGET});
+        } catch (NeedsGuard e) {
+            Integer deep = deepHash(this, new IdentityHashMap<>());
+            return deep != null ? deep : shallowMapHash();
         }
-        return hash;
+    }
+
+    /** The sum of this object's own entries, each key and value hashed shallowly: it never descends. */
+    int shallowMapHash() {
+        int len = fastEntryCount();
+        int h = 0;
+        for (int i = 0; i < len; i++) {
+            h += shallowHash(fastKeyAt(i)) ^ shallowHash(fastValueAt(i));
+        }
+        return h;
+    }
+
+    // The containers a hash walks unguarded -- allocating nothing -- before it walks again, guarded: a loop, a large
+    // graph, or one whose shared objects an unguarded walk would visit once per path to them.
+    private static final int QUICK_HASH_BUDGET = 256;
+
+    private static final class NeedsGuard extends RuntimeException {
+        NeedsGuard() {
+            super(null, null, false, false);
+        }
+    }
+
+    private static final NeedsGuard NEEDS_GUARD = new NeedsGuard();
+
+    // A container the guarded walk has entered and not yet left
+    private static final Object IN_PROGRESS = new Object();
+
+    /** {@link #deepHash}'s value, unguarded: it throws {@link #NEEDS_GUARD} once it has walked its budget of containers. */
+    private static int quickHash(Object value, int[] budget) {
+        if (value == null) {
+            return 0;
+        }
+        Class<?> c = value.getClass();
+        if (c == String.class || c == Long.class || c == Double.class || c == Boolean.class) {
+            return value.hashCode();        // JSON's own values, most of what a tree holds: no interface test
+        }
+        if (value instanceof JsonObject && !((JsonObject) value).isMapShaped()) {
+            return value.hashCode();
+        }
+        boolean map = value instanceof Map;
+        boolean list = value instanceof List;
+        if (!map && !list && !(value instanceof Set)) {
+            return Objects.hashCode(value);
+        }
+        if (--budget[0] < 0) {
+            throw NEEDS_GUARD;
+        }
+        int h;
+        if (value instanceof JsonObject) {
+            JsonObject jObj = (JsonObject) value;
+            h = 0;
+            for (int i = 0, len = jObj.fastEntryCount(); i < len; i++) {
+                h += quickHash(jObj.fastKeyAt(i), budget) ^ quickHash(jObj.fastValueAt(i), budget);
+            }
+        } else if (map) {
+            h = 0;
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                h += quickHash(entry.getKey(), budget) ^ quickHash(entry.getValue(), budget);
+            }
+        } else if (list) {
+            h = 1;
+            for (Object element : (List<?>) value) {
+                h = 31 * h + quickHash(element, budget);
+            }
+        } else {
+            h = 0;
+            for (Object element : (Set<?>) value) {
+                h += quickHash(element, budget);
+            }
+        }
+        return h;
+    }
+
+    /**
+     * The hash {@code value.hashCode()} gives -- AbstractMap's for a map, AbstractList's for a list, AbstractSet's for a
+     * set, each nested one by its own -- or null when a cycle is reachable from it, where those formulas never end.
+     * Each container once: a shared one's hash is remembered.
+     */
+    private static Integer deepHash(Object value, IdentityHashMap<Object, Object> seen) {
+        if (value instanceof JsonObject && !((JsonObject) value).isMapShaped()) {
+            return value.hashCode();        // it holds @items: its own hash, which does not descend
+        }
+        boolean map = value instanceof Map;
+        boolean list = value instanceof List;
+        if (!map && !list && !(value instanceof Set)) {
+            return Objects.hashCode(value);     // a leaf, an array (by identity, as any Map hashes it), another collection
+        }
+        Object prior = seen.get(value);
+        if (prior == IN_PROGRESS) {
+            return null;
+        }
+        if (prior != null) {
+            return (Integer) prior;
+        }
+        seen.put(value, IN_PROGRESS);
+        int h;
+        if (value instanceof JsonObject) {
+            JsonObject jObj = (JsonObject) value;
+            h = 0;
+            for (int i = 0, len = jObj.fastEntryCount(); i < len; i++) {
+                Integer kh = deepHash(jObj.fastKeyAt(i), seen);
+                Integer vh = kh == null ? null : deepHash(jObj.fastValueAt(i), seen);
+                if (vh == null) {
+                    return null;
+                }
+                h += kh ^ vh;
+            }
+        } else if (map) {
+            h = 0;
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                Integer kh = deepHash(entry.getKey(), seen);
+                Integer vh = kh == null ? null : deepHash(entry.getValue(), seen);
+                if (vh == null) {
+                    return null;
+                }
+                h += kh ^ vh;
+            }
+        } else if (list) {
+            h = 1;
+            for (Object element : (List<?>) value) {
+                Integer eh = deepHash(element, seen);
+                if (eh == null) {
+                    return null;
+                }
+                h = 31 * h + eh;
+            }
+        } else {
+            h = 0;
+            for (Object element : (Set<?>) value) {
+                Integer eh = deepHash(element, seen);
+                if (eh == null) {
+                    return null;
+                }
+                h += eh;
+            }
+        }
+        seen.put(value, h);
+        return h;
     }
 
     // Package-private so subclasses (JsonObjectArray, JsonObjectMap) hash their own storage the same way.
@@ -870,21 +1019,60 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof JsonObject)) return false;
-        // Cross-shape comparison returns false. Different subclasses store their data
-        // in different fields; each overrides storageEquals to compare its own.
-        if (this.getClass() != obj.getClass()) return false;
-        JsonObject other = (JsonObject) obj;
-        if (size() != other.size()) return false;
+        if (!isMapShaped()) {
+            return itemsHolderEquals(obj);
+        }
+        if (!(obj instanceof Map) || obj instanceof JsonObject && !((JsonObject) obj).isMapShaped()) {
+            return false;
+        }
+        Map<?, ?> other = (Map<?, ?>) obj;
+        int len = fastEntryCount();
+        if (len != other.size()) return false;
         int mark = enterComparison(this, other);
         if (mark < 0) {
             return true;    // already taken as equal: the loop has closed, or this pair was compared before
         }
         boolean equal = false;
         try {
-            // The lite keys[]/data[] (none on JsonObjectMap), compared here rather than in a helper, and with
-            // Objects.equals() written out: one stack frame per level keeps the deepest comparable graph at least
-            // as deep as it was before the cycle guard.
+            // Objects.equals() written out, in this frame: one stack frame per level keeps the deepest comparable graph
+            // at least as deep as it was before the cycle guard. Keys in the same order -- two reads of one text --
+            // need no lookup.
+            JsonObject same = other instanceof JsonObject ? (JsonObject) other : null;
+            for (int i = 0; i < len; i++) {
+                Object key = fastKeyAt(i);
+                Object value = fastValueAt(i);
+                Object otherValue;
+                Object otherKey = same == null ? null : same.fastKeyAt(i);
+                if (same != null && (key == otherKey || key != null && key.equals(otherKey))) {
+                    otherValue = same.fastValueAt(i);
+                } else {
+                    otherValue = other.get(key);
+                    if (otherValue == null && (value != null || !other.containsKey(key))) {
+                        return false;
+                    }
+                }
+                if (value != otherValue && (value == null || !value.equals(otherValue))) {
+                    return false;
+                }
+            }
+            equal = true;
+            return true;
+        } finally {
+            exitComparison(mark, equal);
+        }
+    }
+
+    /** An object holding @items equals another of its class: its own entries and its items, by position. */
+    private boolean itemsHolderEquals(Object obj) {
+        if (obj == null || this.getClass() != obj.getClass()) return false;
+        JsonObject other = (JsonObject) obj;
+        if (size() != other.size()) return false;
+        int mark = enterComparison(this, other);
+        if (mark < 0) {
+            return true;
+        }
+        boolean equal = false;
+        try {
             int len = size;
             Object[] otherKeys = other.keys;
             Object[] otherData = other.data;
@@ -908,9 +1096,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     /**
-     * Compares the storage a subclass adds to the lite keys/data -- the {@code @items} of an array, the
-     * {@code @keys}/{@code @items} of a complex-keyed map. {@code other} is the same shape and size. Called only
-     * from {@link #equals(Object)}, while the pair is on this thread's comparison path.
+     * Compares the storage an object holding {@code @items} adds to the lite keys/data. {@code other} is the same
+     * class and size. Called only from {@link #equals(Object)}, while the pair is on this thread's comparison path.
      */
     boolean storageEquals(JsonObject other) {
         return true;
