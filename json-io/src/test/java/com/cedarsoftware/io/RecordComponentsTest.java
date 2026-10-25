@@ -6,6 +6,7 @@ import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -15,6 +16,7 @@ import java.util.Optional;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
+import com.cedarsoftware.io.annotation.IoValue;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.SystemUtilities;
@@ -78,6 +80,10 @@ class RecordComponentsTest {
             + "  public record Loop(String name, List<Object> items) { }\n"
             + "  public record Self(String name, Object self) { }\n"
             + "  public record Pair(List<Object> a, List<Object> b, int n) { }\n"
+            + "  public record Code(String v) {\n"
+            + "    @com.cedarsoftware.io.annotation.IoValue public String v() { return v; }\n"
+            + "  }\n"
+            + "  public static class Coded { public Code code; public List<Code> codes; }\n"
             + "  public static class Holder { public Parts parts; public Totals totals; }\n"
             + "}\n";
 
@@ -91,7 +97,10 @@ class RecordComponentsTest {
         Path dir = SystemUtilities.createTempDirectory("recordComponents").toPath();
         Path src = dir.resolve("Records.java");
         Files.write(src, SOURCE.getBytes(StandardCharsets.UTF_8));
-        int rc = compiler.run(null, null, null, "-d", dir.toString(), src.toString());
+        // json-io's annotations from where they were loaded (the test's class path is a manifest jar javac skips)
+        String annotations = Paths.get(IoValue.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toString();
+        int rc = compiler.run(null, null, null, "-d", dir.toString(), "-cp", annotations, src.toString());
         assertEquals(0, rc);
         loader = URLClassLoader.newInstance(new URL[] {dir.toUri().toURL()},
                 RecordComponentsTest.class.getClassLoader());
@@ -199,6 +208,24 @@ class RecordComponentsTest {
         JsonIoException e = assertThrows(JsonIoException.class,
                 () -> JsonIo.toJava(self, readOptions()).asClass(cls("Self")));
         assertTrue(String.valueOf(e.getMessage()).contains("refers to it"), e.getMessage());
+    }
+
+    /**
+     * A record written as the single value its {@code @IoValue} accessor returns is built from it by its canonical
+     * constructor, in a field and a list: json-io's own record factory, which builds a record from its components,
+     * does not take it (there is no component in a value).
+     */
+    @Test
+    void aRecordWrittenByItsValue() throws Exception {
+        Object coded = ReflectionUtils.getConstructor(cls("Coded")).newInstance();
+        ReflectionUtils.getField(cls("Coded"), "code").set(coded, newRecord("Code", "x"));
+        List<Object> codes = new ArrayList<>(Arrays.asList(newRecord("Code", "y")));
+        ReflectionUtils.getField(cls("Coded"), "codes").set(coded, codes);
+        String json = JsonIo.toJson(coded, null);
+        assertTrue(json.contains("\"code\":\"x\""), json);
+        Object back = JsonIo.toJava(json, readOptions()).asClass(cls("Coded"));
+        assertEquals("x", call(ReflectionUtils.getField(cls("Coded"), "code").get(back), "v"));
+        assertEquals("y", call(((List<?>) ReflectionUtils.getField(cls("Coded"), "codes").get(back)).get(0), "v"));
     }
 
     /**

@@ -2417,6 +2417,13 @@ public abstract class Resolver {
         if (valueMethod == null) {
             return NO_VALUE_FORM;
         }
+        if (registeredClasses[0] != targetClass || registeredReaders[0] != NO_VALUE_FORM) {
+            // (the class last asked about with nothing registered for it, as in a run of its values, is asked no more)
+            Object registered = readByRegistered(value, targetClass);
+            if (registered != NO_VALUE_FORM) {
+                return registered;
+            }
+        }
         boolean empty = value instanceof String && ((String) value).isEmpty();
         Executable creator = meta.getValueCreator();
         if (creator == null) {
@@ -2437,6 +2444,68 @@ public abstract class Resolver {
         Map<Object, Object> args = new LinkedHashMap<>();
         args.put(AnnotationResolver.getParameterJsonKey(param), value);
         return invokeCreator(creator, args);
+    }
+
+    /**
+     * {@code value}, as the class factory or custom reader registered for {@code targetClass} reads it, given it as it
+     * is given {"@type":..,"value":..}: an object holding it as its "value". The class's bare value is the form json-io
+     * writes it in where it is declared, and it went to the class's creator, the factory or reader passed over
+     * (4.117.0 too). The factory first, as everywhere; not json-io's own for records, which builds a record from its
+     * components (a value has none). {@link #NO_VALUE_FORM} when neither is registered, or the reader returns null.
+     */
+    private Object readByRegistered(Object value, Class<?> targetClass) {
+        Object registered = registeredFor(targetClass);
+        if (registered instanceof ClassFactory) {
+            return ((ClassFactory) registered).newInstance(targetClass, valueHolder(value, targetClass), this);
+        }
+        if (registered == NO_VALUE_FORM) {
+            return NO_VALUE_FORM;
+        }
+        JsonObject holder = valueHolder(value, targetClass);
+        Object read = ((JsonClassReader<?>) registered).read(holder, this);
+        return read == null ? NO_VALUE_FORM : holder.setFinishedTarget(read, true);
+    }
+
+    // The last classes readByRegistered was asked about, and the factory or reader registered for each (NO_VALUE_FORM
+    // for neither): an @IoValue class comes in runs (a List<EmailAddress>), and its four lookups, made for every
+    // value, cost such a read 6-10%
+    private final Class<?>[] registeredClasses = new Class<?>[4];
+    private final Object[] registeredReaders = new Object[4];
+
+    private Object registeredFor(Class<?> c) {
+        Class<?>[] classes = registeredClasses;
+        for (int i = 0; i < 4; i++) {
+            if (classes[i] == c) {
+                return registeredReaders[i];
+            }
+        }
+        Object registered = NO_VALUE_FORM;
+        ClassFactory factory = readOptions.getClassFactory(c);
+        if (factory == null) {
+            Class<? extends ClassFactory> factoryClass = AnnotationResolver.getMetadata(c).getClassFactory();
+            factory = factoryClass == null ? null : getOrCreateAnnotationFactory(factoryClass);
+        }
+        if (factory != null && !(factory instanceof RecordFactory)) {
+            registered = factory;
+        } else if (!readOptions.isNotCustomReaderClass(c)) {
+            JsonClassReader<?> reader = readOptions.getCustomReader(c);
+            if (reader != null) {
+                registered = reader;
+            }
+        }
+        // The newest first: the check in fromValueForm looks at the first alone
+        System.arraycopy(classes, 0, classes, 1, 3);
+        System.arraycopy(registeredReaders, 0, registeredReaders, 1, 3);
+        registeredReaders[0] = registered;
+        classes[0] = c;
+        return registered;
+    }
+
+    private static JsonObject valueHolder(Object value, Class<?> type) {
+        JsonObject holder = new JsonObject();
+        holder.setType(type);
+        holder.put("value", value);
+        return holder;
     }
 
     /**
