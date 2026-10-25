@@ -228,7 +228,7 @@ class MapsModeReadTest {
                 new Place(new Address("2 Elm", 7), 3)));
         Object[] items = ((JsonObject) json(list, null)).getItems();
         assertEquals("1 Main", ((Map<?, ?>) ((Map<?, ?>) items[0]).get("value")).get("street"));
-        assertEquals(3, ((Map<?, ?>) items[1]).get("floor"));
+        assertEquals(3L, ((Map<?, ?>) items[1]).get("floor"));     // in a list it stays JSON, as in a field
     }
 
     /** A map or list built from its value is still built: it is no object Maps mode keeps a map. */

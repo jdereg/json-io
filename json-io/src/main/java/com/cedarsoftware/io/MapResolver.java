@@ -801,8 +801,32 @@ public class MapResolver extends Resolver {
         }
 
         jObj.setType(Object.class);
+        if (staysJson(jObj)) {
+            // An object stays JSON here, as in a field: not built, its fields as JSON gives them. It was built when its
+            // class was on the classpath (its constructor run, its fields typed by its class), and a list read at the
+            // root as a List lost it: a null in its place, its target cleared once its fields were read.
+            push(jObj);
+            col.add(jObj);
+            return;
+        }
         createInstance(jObj);
         addResolvedObjectToCollection(jObj, col);
+    }
+
+    /**
+     * An object of any class, on the classpath or not -- not a collection, a map or an array, nor a value json-io
+     * writes with its type (a number, a date, a UUID, an enum constant), which are read as before. A constant with a
+     * body (its class an anonymous subclass of its enum, as json-io names it) stays JSON too: it was a null.
+     */
+    private boolean staysJson(JsonObject jObj) {
+        if (jObj.getJsonType() != JsonObject.JsonType.OBJECT) {
+            return false;
+        }
+        Class<?> type = jObj.getRawType();
+        if (type == null || type == Object.class) {
+            return true;
+        }
+        return !(getReadOptions().isNonReferenceableClass(type) && converter.isConversionSupportedFor(Map.class, type));
     }
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {

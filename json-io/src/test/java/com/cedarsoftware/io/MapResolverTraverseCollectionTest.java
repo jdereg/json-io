@@ -97,7 +97,7 @@ class MapResolverTraverseCollectionTest {
         assertEquals("target", list.get(5));
         assertNull(list.get(6));
         assertEquals("str", list.get(7));
-        assertNull(list.get(8));
+        assertSame(custom, list.get(8));    // an object stays JSON in Maps mode (it was built, then lost: a null)
 
         assertEquals(1, resolver.unresolvedRefs.size());
     }

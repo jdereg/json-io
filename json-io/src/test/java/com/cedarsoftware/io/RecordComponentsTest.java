@@ -254,6 +254,6 @@ class RecordComponentsTest {
         String list = JsonIo.toJson(new ArrayList<>(Arrays.asList(parts, pair)), null);
         Object[] items = ((JsonObject) JsonIo.toMaps(list, readOptions()).asClass(null)).getItems();
         assertEquals("Main", ((Map<?, ?>) ((Map<?, ?>) items[0]).get("addr")).get("street"));
-        assertEquals(5, ((Map<?, ?>) items[1]).get("n"));
+        assertEquals(5L, ((Map<?, ?>) items[1]).get("n"));     // in a list it stays JSON, as in a field
     }
 }
