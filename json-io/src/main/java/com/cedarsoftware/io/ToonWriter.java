@@ -3430,12 +3430,19 @@ public class ToonWriter implements Closeable, Flushable {
         return false;
     }
 
-    /** A simple map key's text: an enum written by its {@code @IoValue} method is its value, as JSON writes it. */
+    /**
+     * A simple map key's text: an enum is written as it is as a value -- by its {@code @IoValue} method (or custom
+     * writer), else its name, never its {@code toString()}, which does not read back when the enum overrides it
+     * ("No enum constant") -- as JSON writes it and Jackson does.
+     */
     private String keyText(Object key) {
         if (key == null) {
             return "null";
         }
-        return key instanceof Enum && isDataClass(key.getClass()) ? String.valueOf(dataOf(key)) : key.toString();
+        if (key instanceof Enum) {
+            return isDataClass(key.getClass()) ? String.valueOf(dataOf(key)) : ((Enum<?>) key).name();
+        }
+        return key.toString();
     }
 
     /**

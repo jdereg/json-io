@@ -2622,7 +2622,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // a BigDecimal key as a BigDecimal value is written, keeping its scale (Converter writes 1E+3 as 1000)
             String keyStr = key == null ? "null" : key instanceof BigDecimal
                     ? Writers.bigDecimalText((BigDecimal) key, writeOptions.getConverterOptions().getMaxPlainDigits())
-                    : Converter.convert(key, String.class);
+                    : key instanceof Enum ? enumKeyText((Enum<?>) key) : Converter.convert(key, String.class);
             gen.writeFieldName(keyStr);
             writeCollectionElement(value);
             gen.markValue();
@@ -2630,6 +2630,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
 
         gen.writeEndObjectRaw();
         return true;
+    }
+
+    // The enum class of the last enum map key written, and its @IoValue method (null: none)
+    private Class<?> keyEnumClass;
+    private Method keyValueMethod;
+
+    /**
+     * An enum map key's text: the value its {@code @IoValue} (or {@code @JsonValue}) method gives, as the enum is
+     * written as a value, as TOON writes it as a key, and as Jackson writes a {@code @JsonValue} enum key; else its
+     * name. (Converter gave the name for both.) The reader takes either. A constant with a body is of its enum.
+     */
+    private String enumKeyText(Enum<?> key) {
+        Class<?> c = key.getDeclaringClass();
+        if (c != keyEnumClass) {
+            keyValueMethod = WriteOptionsBuilder.findValueMethod(writeOptions, c);
+            keyEnumClass = c;
+        }
+        return keyValueMethod == null ? key.name() : String.valueOf(valueOf(keyValueMethod, key));
     }
 
     /**
