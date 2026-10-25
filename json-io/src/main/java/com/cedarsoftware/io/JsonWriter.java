@@ -2430,7 +2430,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             // Log a one-time deprecation warning if the keys COULD be stringified but the option is off
             if (!stringifyMapKeys && !map.isEmpty() && canStringifyMapKeys(map)
                     && stringifyMapKeysWarned.compareAndSet(false, true)) {
-                LOG.warning("json-io: Map with non-String keys (e.g., " + map.keySet().iterator().next().getClass().getSimpleName()
+                LOG.warning("json-io: Map with non-String keys (e.g., " + keyClassName(map.keySet().iterator().next())
                         + ") written using @keys/@items format. Use WriteOptionsBuilder.stringifyMapKeys(true) or .standardJson() "
                         + "to write as standard JSON (e.g., {\"100\": value}). This will become the default in json-io 5.0.");
             }
@@ -2529,6 +2529,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
         return true;
+    }
+
+    /**
+     * A key's class as the warning names it: an enum constant with a body by its enum, whose own class has an empty
+     * simple name ("(e.g., )"). (No other class without one reaches the warning: the Converter makes none from text.)
+     */
+    private static String keyClassName(Object key) {
+        return (key instanceof Enum ? ((Enum<?>) key).getDeclaringClass() : key.getClass()).getSimpleName();
     }
 
     /**
