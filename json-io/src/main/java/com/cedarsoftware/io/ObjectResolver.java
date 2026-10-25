@@ -1026,8 +1026,12 @@ public class ObjectResolver extends Resolver
                 continue;
             }
 
-            // Strategy 8: FALLBACK - direct add (a TOON list as the list or array type declared, see declaredFormOf)
-            col.add(declaredFormOf(element, elementType));
+            // Strategy 8: FALLBACK - direct add (a TOON list as the list or array type declared, see declaredFormOf).
+            // Blank text where a class is declared that nothing built from it is null, as in a field, an array and a
+            // map: it stayed a String in the List<Address>, List<LocalDate>.
+            boolean blank = element instanceof String && StringUtilities.isEmpty((String) element)
+                    && !rawElementType.isInstance(element);
+            col.add(blank ? null : declaredFormOf(element, elementType));
             idx++;
         }
     }
@@ -2239,9 +2243,11 @@ public class ObjectResolver extends Resolver
                 && converter.isConversionSupportedFor(rhs.getClass(), innerType)) {
             innerValue = convertValue(rhs, innerType);
         } else if (innerType != Object.class && !innerType.isInstance(rhs)) {
-            // A class written as the single value its @IoValue method returns: Optional<EmailAddress>
+            // A class written as the single value its @IoValue method returns: Optional<EmailAddress>. Blank text
+            // nothing builds the class from is null, as in a field: empty, not an Optional<Address> holding a String.
             Object built = fromValueForm(rhs, innerType, true);
-            innerValue = built == NO_VALUE_FORM ? rhs : built;
+            innerValue = built != NO_VALUE_FORM ? built
+                    : rhs instanceof String && StringUtilities.isEmpty((String) rhs) ? null : rhs;
         } else {
             innerValue = rhs;
         }

@@ -836,6 +836,11 @@ public abstract class Resolver {
                 if (built != NO_VALUE_FORM) {
                     return java.util.Optional.of(built);
                 }
+                if (value instanceof String && StringUtilities.isEmpty((String) value)) {
+                    // Blank text where a class is declared is null, as in a field: empty, not an Optional<Address>
+                    // holding a String
+                    return java.util.Optional.empty();
+                }
             }
             return java.util.Optional.of(value);
         }
