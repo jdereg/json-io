@@ -571,6 +571,26 @@ This feature allows for high customization and flexibility in how classes are in
 >- [ ] Associate a`ClassFactory`to a`Class`that needs help being constructed and read in. If you use this method
    more than once for the same class, the last`ClassFactory`associated to the class will overwrite any prior associations.
 
+### Converter Overrides
+
+A conversion you register replaces or adds to the Converter's own for this `ReadOptions`. One from a `Map` (or a
+`JsonObject`) to a class builds a JSON object read as that class -- at the root, in a field, as an element -- before the
+class's `ClassFactory` and its constructors. It is given the JSON's own map: values as JSON gives them, a nested object a
+map, a value json-io wrote with its type (a date, a `BigDecimal`) that value. What it returns is the object; the JSON's
+keys do not then overwrite its fields. If it throws, the read fails with its exception as the cause, the message naming
+the field it was reading.
+
+```java
+ReadOptions options = new ReadOptionsBuilder()
+        .addConverterOverride(Map.class, Policy.class,
+                (from, converter) -> new Policy("P-" + ((Map<?, ?>) from).get("holder")))
+        .build();
+Policy policy = JsonIo.toJava("{\"holder\":\"Ann\"}", options).asClass(Policy.class);
+```
+
+>#### `ReadOptionsBuilder` addConverterOverride(`Class source, Class target, Convert conversion`)
+>- [ ] Register a conversion from `source` to `target`. A later one for the same pair replaces it.
+
 ### Custom Readers
 
 Custom Readers in `json-io` offer a specialized mechanism for handling JSON deserialization when the default process

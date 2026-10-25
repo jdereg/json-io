@@ -1689,6 +1689,20 @@ public abstract class Resolver {
 
     private static final InstantiationPlan UNBUILT_PLAN = (jsonObj, resolver, targetType) -> jsonObj.setTarget(UNBUILT);
 
+    /** Builds the object by the conversion the caller registered (see {@link #hasRegisteredMapConversion}). */
+    private static final InstantiationPlan REGISTERED_CONVERSION_PLAN = (jsonObj, resolver, targetType) ->
+            jsonObj.setFinishedTarget(resolver.converter.convert(resolver.resolveTypedValues(jsonObj), targetType), true);
+
+    /**
+     * True when the caller registered a conversion to {@code targetType} from a Map (or a JsonObject): only one they
+     * registered -- a built-in one has its own plan, and the Converter knows classes json-io builds another way.
+     */
+    private static boolean hasRegisteredMapConversion(Class<?> targetType, ReadOptions readOptions) {
+        Map<Converter.ConversionPair, ?> overrides = readOptions.getConverterOptions().getConverterOverrides();
+        return !overrides.isEmpty() && (overrides.containsKey(Converter.pair(Map.class, targetType))
+                || overrides.containsKey(Converter.pair(JsonObject.class, targetType)));
+    }
+
     /**
      * True for the class of an object with fields: not a map, a collection, an array or Object (nor a value type or
      * an enum, planned before this is asked).
@@ -1809,6 +1823,14 @@ public abstract class Resolver {
         //     already: its parts stay maps, which its constructor does not take.
         if (readOptions.isReturningJsonObjects() && isObjectOfAClass(targetType)) {
             return UNBUILT_PLAN;
+        }
+
+        // 4b. A conversion the caller registered from a Map to this class (ReadOptionsBuilder.addConverterOverride),
+        //     before its factory and its constructors: it builds the object from the JSON's own map, as the Converter
+        //     builds a value type. It was never consulted for a JSON object: the class was built by its constructors
+        //     ("Unable to instantiate"), the conversion ignored.
+        if (hasRegisteredMapConversion(targetType, readOptions)) {
+            return REGISTERED_CONVERSION_PLAN;
         }
         if (factory != null) {
             return new FactoryPlan(factory);
