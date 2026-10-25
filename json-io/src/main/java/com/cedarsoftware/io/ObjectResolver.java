@@ -253,11 +253,36 @@ public class ObjectResolver extends Resolver
         seedIncrementalContainerMetadata(resolvedFieldType, jsRhs);
 
         createInstance(jsRhs);
+        Object read = readByCustomReader(jsRhs);
+        if (read != null) {
+            injector.inject(target, read);
+            return;
+        }
         injector.inject(target, jsRhs.getTarget());
 
         if (!readOptions.isNonReferenceableClass(jsRhs.getRawType())) {
             push(jsRhs);
         }
+    }
+
+    /**
+     * A field's object of a class with a custom reader, read by it now, as a collection's element is. Read when it
+     * came off the stack (traverseObject), its result went to the object, not to the field, which kept the instance
+     * made for it, empty: the reader having read the object, its fields were left unread (4.117.0 too). Null where no
+     * reader reads it, or the reader returns null: a map, collection or array, which never came to a reader, and an
+     * object a class factory finished go on as before.
+     */
+    private Object readByCustomReader(JsonObject jsRhs) {
+        if (jsRhs.isFinished || jsRhs.getJsonType() != JsonObject.JsonType.OBJECT) {
+            return null;
+        }
+        Class<?> c = jsRhs.getRawType();
+        JsonClassReader<?> reader = readOptions.getCustomReader(c);
+        if (reader == null || readOptions.isNotCustomReaderClass(c)) {
+            return null;
+        }
+        Object read = reader.read(jsRhs, this);
+        return read == null ? null : jsRhs.setFinishedTarget(read, true);
     }
 
     /**
