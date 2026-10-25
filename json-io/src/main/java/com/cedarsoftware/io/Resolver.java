@@ -2227,16 +2227,21 @@ public abstract class Resolver {
         final Method creator;
         final Class<?> creatorParameter;
         final Map<Object, Object> byValue;
+        final Map<Object, Object> byText;   // a boolean value, by its text: "false"
+        final boolean numbers;              // a value is a number: text is read as one
 
-        EnumReading(Method creator, Map<Object, Object> byValue) {
+        EnumReading(Method creator, Map<Object, Object> byValue, Map<Object, Object> byText, boolean numbers) {
             this.creator = creator;
             this.creatorParameter = creator == null ? null
                     : ClassUtilities.toPrimitiveWrapperClass(creator.getParameterTypes()[0]);
             this.byValue = byValue;
+            this.byText = byText;
+            this.numbers = numbers;
         }
     }
 
-    private static final EnumReading PLAIN_ENUM = new EnumReading(null, Collections.emptyMap());
+    private static final EnumReading PLAIN_ENUM = new EnumReading(null, Collections.emptyMap(),
+            Collections.emptyMap(), false);
 
     private static final ClassValue<EnumReading> ENUM_READING = new ClassValue<EnumReading>() {
         @Override
@@ -2252,6 +2257,8 @@ public abstract class Resolver {
                     && enumClass.isAssignableFrom(((Method) annotated).getReturnType()) ? (Method) annotated : null;
             Method valueMethod = meta.getValueMethod();
             Map<Object, Object> byValue = valueMethod == null ? Collections.emptyMap() : new HashMap<>();
+            Map<Object, Object> byText = valueMethod == null ? Collections.emptyMap() : new HashMap<>();
+            boolean numbers = false;
             if (valueMethod != null) {
                 for (Object constant : enumClass.getEnumConstants()) {
                     Object value;
@@ -2261,11 +2268,17 @@ public abstract class Resolver {
                         throw new JsonIoException("@IoValue method invocation failed for " + enumClass.getName(), e);
                     }
                     if (value != null) {
-                        byValue.putIfAbsent(enumKey(value), constant);
+                        Object key = enumKey(value);
+                        byValue.putIfAbsent(key, constant);
+                        if (key instanceof Boolean) {
+                            byText.putIfAbsent(key.toString(), constant);
+                        }
+                        numbers |= key instanceof Number;
                     }
                 }
             }
-            return creator == null && byValue.isEmpty() ? PLAIN_ENUM : new EnumReading(creator, byValue);
+            return creator == null && byValue.isEmpty() ? PLAIN_ENUM
+                    : new EnumReading(creator, byValue, byText, numbers);
         }
     };
 
@@ -2296,7 +2309,31 @@ public abstract class Resolver {
                 }
             }
         }
-        return reading.byValue.isEmpty() ? null : reading.byValue.get(enumKey(value));
+        if (reading.byValue.isEmpty()) {
+            return null;
+        }
+        Object constant = reading.byValue.get(enumKey(value));
+        return constant == null && value instanceof String ? enumConstantOfText(reading, (String) value) : constant;
+    }
+
+    /**
+     * A boolean or number value as text (a TOON map key, a stringified one): "false", "9", "2.0" for 2.0. No enum
+     * constant is so named, so the text takes no name's place.
+     */
+    private static Object enumConstantOfText(EnumReading reading, String text) {
+        if (text.isEmpty()) {
+            return null;
+        }
+        Object constant = reading.byText.get(text);
+        char c = text.charAt(0);
+        if (constant == null && reading.numbers && (c >= '0' && c <= '9' || c == '-' || c == '+' || c == '.')) {
+            try {
+                constant = reading.byValue.get(enumKey(Double.parseDouble(text)));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return constant;
     }
 
     /** A value as it is looked up: a whole number as a Long, another number as a Double, a char as text. */
