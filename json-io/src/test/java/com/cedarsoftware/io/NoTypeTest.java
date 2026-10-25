@@ -21,7 +21,6 @@ import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -66,8 +65,12 @@ public class NoTypeTest
     void personTestToPersonWithReadOptionJavaObjects()
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/person.json");
-        String msg = assertThrows(JsonIoException.class, () -> TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Person.class)).getMessage();
-        assert msg.contains("isReturningJsonObjects");
+        // Maps mode, the class asked for: built as Java mode builds it from the tree (it was refused, naming
+        // isReturningJsonObjects)
+        Person person = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Person.class);
+        assert person.name.equals("Joe");
+        assert person.age == 50;
+        assert person.salary == 225000.0d;
     }
 
     @Test
@@ -103,12 +106,10 @@ public class NoTypeTest
     {
         String json = ClassUtilities.loadResourceAsString("noTypes/persons.json");
 
-        try {
-            Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Person[].class);
-            fail();
-        } catch (JsonIoException e) {
-            assert e.getMessage().contains("isReturningJsonObjects");
-        }
+        // Built as Java mode builds them from the tree (they were refused, naming isReturningJsonObjects)
+        Person[] persons = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(Person[].class);
+        assert persons[0].name.equals("Joe");
+        assert persons[1].salary == 314000.0d;
     }
 
     @Test

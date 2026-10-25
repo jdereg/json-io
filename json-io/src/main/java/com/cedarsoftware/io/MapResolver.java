@@ -68,6 +68,119 @@ public class MapResolver extends Resolver {
     }
 
     /**
+     * The root, as the type asked for: that type, or an error naming why the JSON cannot be it, as in Java mode. A
+     * JSON value (a string, number, boolean or null) is converted as Java mode converts it. An object or array asked
+     * for as a value type or an array ({@code LocalDate}, {@code int[]}, {@code Map[]}) is read as the JSON it is, then
+     * converted -- read in the array's shape, the JSON array itself was filled as its elements converted (a reference
+     * a second, empty map; an object in a {@code List[]} a null). One asked for as a Map or a Collection is read in
+     * that shape ({@link #jsonShape}); a JSON object is not a list (it was an empty one, its fields lost). A type this
+     * read does not reach (a class, type arguments) is reached afterward from the tree ({@link #readsFromTree}).
+     */
+    @Override
+    public Object toJava(Type type, Object value) {
+        if (isJsonValue(value)) {
+            return super.toJava(type, value);
+        }
+        if (isValueShape(type)) {
+            Object tree = super.toJava(null, value);
+            // A collection the JSON names ({"@type":"HashSet","@items":[..]}) converts as its items
+            Object from = tree instanceof JsonObject && !((JsonObject) tree).isMapShaped()
+                    && ((JsonObject) tree).getItems() != null ? ((JsonObject) tree).getItems() : tree;
+            return convertToType(from, type);
+        }
+        Type shape = jsonShape(type);
+        if (isPlainObjectReadAsItems(value, shape)) {
+            throw new JsonIoException("Return type mismatch. Expecting: " + TypeUtilities.getRawClass(shape).getName()
+                    + ", found: " + JsonObject.class.getName());
+        }
+        return super.toJava(shape, value);
+    }
+
+    /** A JSON string, number, boolean or null at the root: not an object, an array, or a list (TOON). */
+    private static boolean isJsonValue(Object value) {
+        return value == null || !(value instanceof JsonObject) && !(value instanceof Collection)
+                && !value.getClass().isArray();
+    }
+
+    /**
+     * The type a Maps-mode read takes from the type asked for at the root, as it parses and resolves the JSON: that
+     * type, where it is a shape Maps mode reads itself (a {@code Map} or {@code Collection} class);
+     * its {@code Map} or {@code Collection} class alone, where its type arguments ask for more than JSON's own values
+     * ({@code List<LocalDate>}); none ({@code null}) for a value type, which is converted from the JSON read
+     * ({@link #isValueShape}), and for a type Maps mode does not build ({@code Person}, {@code Person[]}, an enum,
+     * {@code Optional}) -- the parse does not type the root's fields by it either.
+     */
+    static Type jsonShape(Type type) {
+        if (type == null || type == Object.class || !isMapsModeRootType(type) || isValueShape(type)) {
+            return null;
+        }
+        return type instanceof ParameterizedType && !asksNoMore((ParameterizedType) type)
+                ? TypeUtilities.getRawClass(type) : type;
+    }
+
+    /**
+     * A Maps-mode root type converted from the JSON read, which the conversion leaves as it is: a value type (types
+     * supported by Converter.convert(), primitives and their wrappers, {@code Number}), or an array of these, of Maps,
+     * Collections or {@code Object} ({@code LocalDate[]}, {@code int[][]}, {@code List[]}). Read in such a shape, the
+     * JSON array itself was filled with what its elements converted to, half filled where one did not. Not a Map or a
+     * Collection, which Maps mode reads as they are.
+     */
+    private static boolean isValueShape(Type type) {
+        if (type == null || !isMapsModeRootType(type)) {
+            return false;
+        }
+        Class<?> raw = TypeUtilities.getRawClass(type);
+        return raw.isArray() || !Map.class.isAssignableFrom(raw) && !Collection.class.isAssignableFrom(raw);
+    }
+
+    /**
+     * Whether a Maps-mode root is read afterward from the tree, as Java mode reads its text: where the type asked for
+     * is one this read does not reach (a class Maps mode does not build, type arguments it does not apply).
+     */
+    static boolean readsFromTree(Object root, Type type) {
+        return type != null && type != Object.class && !isValueShape(type) && jsonShape(type) != type
+                && !reaches(root, type);
+    }
+
+    /**
+     * Whether a root is the type asked for: an instance of its class, whose type arguments ask for no more than JSON's
+     * own values. (A primitive is a value type, never asked here.)
+     */
+    private static boolean reaches(Object root, Type type) {
+        if (root == null || type == null || type == Object.class) {
+            return true;
+        }
+        Class<?> raw = TypeUtilities.getRawClass(type);
+        return raw == null || raw.isInstance(root)
+                && (type instanceof Class || type instanceof ParameterizedType && asksNoMore((ParameterizedType) type));
+    }
+
+    /** Type arguments a JSON read gives anyway: anything ({@code Object}, {@code ?}), a map of it, a map's String keys. */
+    private static boolean asksNoMore(ParameterizedType type) {
+        Type[] args = type.getActualTypeArguments();
+        boolean map = Map.class.isAssignableFrom(TypeUtilities.getRawClass(type));
+        for (int i = 0; i < args.length; i++) {
+            Type arg = args[i];
+            if (!isAnything(arg) && arg != JsonObject.class && !isMapItself(arg)
+                    && !(map && i == 0 && arg == String.class)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** A JSON object naming no type of its own (no @type, no @items), asked for as a Collection. */
+    private static boolean isPlainObjectReadAsItems(Object value, Type shape) {
+        if (!(value instanceof JsonObject)) {
+            return false;
+        }
+        JsonObject jObj = (JsonObject) value;
+        Class<?> raw = TypeUtilities.getRawClass(shape);
+        return jObj.isMapShaped() && jObj.getKeys() == null && jObj.getTypeString() == null && raw != null
+                && Collection.class.isAssignableFrom(raw);
+    }
+
+    /**
      * Override toJavaObjects to validate rootType before resolution.
      * In Maps mode, only certain types are supported as rootType. {@code Object} is asking for whatever the JSON
      * holds, as no type ({@code null}) is.
@@ -89,34 +202,12 @@ public class MapResolver extends Resolver {
      * @throws JsonIoException if rootType is not supported in Maps mode
      */
     private void verifyRootType(Type rootType) {
-        if (rootType == null) {
-            return;
-        }
-
-        Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
-        Type typeToCheck = rootType;
-
-        // If the raw type represents an array, drill down to the ultimate component type.
-        if (rawRootType != null && rawRootType.isArray()) {
-            typeToCheck = getUltimateComponentType(rootType);
-            Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
-            if (isPseudoPrimitive(ultimateRawType) ||
-                    ultimateRawType == Number.class ||
-                    (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
-                return;
-            }
-        } else if (isPseudoPrimitive(rawRootType) || rawRootType == Number.class) {
-            return;
-        }
-
-        // Check for Collection or Map types
-        Class<?> rawTypeToCheck = TypeUtilities.getRawClass(typeToCheck);
-        if (rawTypeToCheck != null &&
-                (Collection.class.isAssignableFrom(rawTypeToCheck) || Map.class.isAssignableFrom(rawTypeToCheck))) {
+        if (rootType == null || isMapsModeRootType(rootType)) {
             return;
         }
 
         // Type not supported in Maps mode
+        Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
         String typeName = rawRootType != null ? rawRootType.getName() : rootType.toString();
         throw new JsonIoException("In readOptions.isReturningJsonObjects() mode, the rootType '" + typeName +
                 "' is not supported. Allowed types are:\n" +
@@ -130,9 +221,36 @@ public class MapResolver extends Resolver {
     }
 
     /**
+     * A type Maps mode reads itself: primitives and their wrappers, types supported by Converter.convert(), Map,
+     * Collection, and arrays (of any depth) of these.
+     */
+    private static boolean isMapsModeRootType(Type rootType) {
+        Class<?> rawRootType = TypeUtilities.getRawClass(rootType);
+        Type typeToCheck = rootType;
+
+        // If the raw type represents an array, drill down to the ultimate component type.
+        if (rawRootType != null && rawRootType.isArray()) {
+            typeToCheck = getUltimateComponentType(rootType);
+            Class<?> ultimateRawType = TypeUtilities.getRawClass(typeToCheck);
+            if (isPseudoPrimitive(ultimateRawType) ||
+                    ultimateRawType == Number.class ||
+                    (ultimateRawType != null && ultimateRawType.equals(Object.class))) {
+                return true;
+            }
+        } else if (isPseudoPrimitive(rawRootType) || rawRootType == Number.class) {
+            return true;
+        }
+
+        // Check for Collection or Map types
+        Class<?> rawTypeToCheck = TypeUtilities.getRawClass(typeToCheck);
+        return rawTypeToCheck != null &&
+                (Collection.class.isAssignableFrom(rawTypeToCheck) || Map.class.isAssignableFrom(rawTypeToCheck));
+    }
+
+    /**
      * Drills down through array types to find the ultimate component type.
      */
-    private Type getUltimateComponentType(Type type) {
+    private static Type getUltimateComponentType(Type type) {
         while (true) {
             if (type instanceof Class<?>) {
                 Class<?> cls = (Class<?>) type;

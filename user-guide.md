@@ -91,6 +91,28 @@ LinkedHashMap ordering), arrays, and primitive types. `asClass(Map.class)` is th
 and write it back -- while a concrete class (`asClass(LinkedHashMap.class)`, `asClass(TreeMap.class)`) is a copy into
 that class. A `JsonObject` follows the `Map` contract: it equals any `Map` with the same entries, in any order.
 
+### Asking Map Mode for a Type at the Root
+`asClass()` and `asType()` shape the root; below it the tree stays JSON. The root is the type asked for, or a
+`JsonIoException` naming why the JSON cannot be it, as in Java mode:
+- **A value type or an array** (`Integer`, `LocalDate`, `ZonedDateTime`, an enum; `LocalDate[]`, `int[]`, `Map[]`):
+  converted from the JSON value or array.
+- **`Map`, `List`, `Set`, or a concrete Map or Collection class**: the tree's root, or a copy into that class. A JSON
+  object is not a list: asked for as one, it is an error.
+- **A class** (`Person`, `Person[]`, `Optional<Person>`), **or type arguments that ask for more than JSON's own values**
+  (`List<LocalDate>`, `Map<String, Person>`): built as Java mode builds them from the tree -- a conversion registered
+  from `Map` to the class, its `ClassFactory`, a creator, its constructors. A class the tree names that is not on the
+  classpath stays a map. This reads the tree a second time; when the classes are known, `toJava()` is faster.
+
+To take the class where the JSON is one and the JSON where it is not, read the tree first, then the class from it:
+```java
+JsonObject tree = JsonIo.toMaps(input).asClass(JsonObject.class);
+try {
+    Person person = JsonIo.toJava(tree, readOptions).asClass(Person.class);
+} catch (JsonIoException e) {
+    // e names why; the tree is the JSON as it is
+}
+```
+
 ### Representation of JSON Structures as Maps
 When `Map` is returned, the root value can represent one of the following:
 - **JSON Object (`{...}`)**: Transformed into a `Map` that represents any JSON object `{...}`.

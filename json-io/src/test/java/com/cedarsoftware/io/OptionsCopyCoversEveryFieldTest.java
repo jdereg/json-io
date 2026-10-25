@@ -51,6 +51,7 @@ class OptionsCopyCoversEveryFieldTest {
         WRITE_EXEMPT.put("aliasesShared", "set by the copy itself: the alias map is shared until the copy changes it");
 
         READ_EXEMPT.put("returningJsonObjects", cache);
+        READ_EXEMPT.put("readingTreeText", cache);
         READ_EXEMPT.put("converter", cache);
         READ_EXEMPT.put("aliasesShared", "set by the copy itself: the alias map is shared until the copy changes it");
     }

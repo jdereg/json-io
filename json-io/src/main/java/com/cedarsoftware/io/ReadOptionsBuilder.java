@@ -2112,6 +2112,8 @@ public class ReadOptionsBuilder {
         private boolean aliasesShared;
         // These options returning JsonObjects (toMaps() reads with them): made on first use, and go when these go
         private volatile ReadOptions returningJsonObjects;
+        // These options reading a Maps-mode tree's text as classes (JsonIo.readingTreeText): made on first use
+        private volatile ReadOptions readingTreeText;
         // The Converter every read with these options uses (their conversion settings are fixed once built)
         private volatile Converter converter;
         // Class-keyed settings: plain concurrent maps and sets, cheap to copy from the BASE_* settings on every
@@ -2624,6 +2626,24 @@ public class ReadOptionsBuilder {
                 }
             }
             return maps;
+        }
+
+        /**
+         * These options reading a Maps-mode tree's text as classes: in Java mode, a class the tree names that is not on
+         * the classpath staying a map. A copy made once.
+         */
+        ReadOptions readingTreeText() {
+            ReadOptions java = readingTreeText;
+            if (java == null) {
+                synchronized (this) {
+                    java = readingTreeText;
+                    if (java == null) {
+                        java = new ReadOptionsBuilder(this).returnAsJavaObjects().failOnUnknownType(false).build();
+                        readingTreeText = java;
+                    }
+                }
+            }
+            return java;
         }
 
         /**

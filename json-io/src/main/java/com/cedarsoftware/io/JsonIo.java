@@ -298,7 +298,7 @@ public class JsonIo {
      */
     @FunctionalInterface
     private interface ParseFunction {
-        Object parse(Resolver resolver) throws Exception;
+        Object parse(Resolver resolver, java.lang.reflect.Type readType) throws Exception;
     }
 
     /**
@@ -321,11 +321,15 @@ public class JsonIo {
             Closeable streamToClose) {
 
         Resolver resolver = createResolver(readOptions);
+        // Maps mode parses in the shape it reads itself: a class it does not build (Person) does not type the root's
+        // fields as the parse goes; that class is reached afterward, from the tree
+        boolean maps = readOptions.isReturningJsonObjects();
+        java.lang.reflect.Type readType = maps ? MapResolver.jsonShape(targetType) : targetType;
 
         // Parse phase
         Object parsed;
         try {
-            parsed = parseFunction.parse(resolver);
+            parsed = parseFunction.parse(resolver, readType);
         } catch (JsonIoException e) {
             throw e;
         } catch (JsonParseException e) {
@@ -343,8 +347,9 @@ public class JsonIo {
             ClassUtilities.setUseUnsafe(true);
         }
 
+        Object result;
         try {
-            return (T) resolver.toJava(targetType, parsed);
+            result = resolver.toJava(targetType, parsed);
         } catch (Exception e) {
             if (e instanceof JsonIoException) {
                 throw (JsonIoException) e;
@@ -359,6 +364,22 @@ public class JsonIo {
                 IOUtilities.close(streamToClose);
             }
         }
+        if (maps && MapResolver.readsFromTree(result, targetType)) {
+            // A class Maps mode does not build, type arguments it does not apply: as Java mode reads the tree's text,
+            // or Java mode's error
+            result = toJava(toJson(result, null), readingTreeText(readOptions)).asType(TypeHolder.forType(targetType));
+        }
+        return (T) result;
+    }
+
+    /**
+     * How a Maps-mode tree's text is read as classes: these options in Java mode, a class the tree names that is
+     * not on the classpath staying a map, as the Maps-mode read found it. Made once per ReadOptions.
+     */
+    static ReadOptions readingTreeText(ReadOptions readOptions) {
+        return readOptions instanceof ReadOptionsBuilder.DefaultReadOptions
+                ? ((ReadOptionsBuilder.DefaultReadOptions) readOptions).readingTreeText()
+                : new ReadOptionsBuilder(readOptions).returnAsJavaObjects().failOnUnknownType(false).build();
     }
 
     /**
@@ -1608,9 +1629,9 @@ public class JsonIo {
                 return parseAndResolve(
                         readOptions,
                         typeHolder.getType(),
-                        resolver -> {
+                        (resolver, readType) -> {
                             JsonParser parser = new JsonParser(input, resolver, strings);
-                            return parser.readValue(typeHolder.getType());
+                            return parser.readValue(readType);
                         },
                         "Error parsing JSON value",
                         null);
@@ -1699,9 +1720,9 @@ public class JsonIo {
                 return parseAndResolve(
                         readOptions,
                         typeHolder.getType(),
-                        resolver -> {
+                        (resolver, readType) -> {
                             JsonParser parser = new JsonParser(input, resolver, strings);
-                            return parser.readValue(typeHolder.getType());
+                            return parser.readValue(readType);
                         },
                         "Error parsing JSON value",
                         input);
@@ -1792,22 +1813,21 @@ public class JsonIo {
          * @return an object of the specified type populated from the JsonObject
          */
         public <T> T asType(TypeHolder<T> typeHolder) {
-            ReadOptions effectiveOptions = readOptions;
-            if (!effectiveOptions.isReturningJavaObjects()) {
-                effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
-            }
             if (jsonObject.readAsMaps) {
                 // A tree a Maps-mode read gave, changed or not: read as Java mode reads its text. Its objects carry that
                 // read's state -- a root typed Object hid the class asked for ("Return type mismatch .. found
                 // JsonObject"), a map or list held its own copy of its items (an empty map, a null in an array). A class
                 // the tree names that is not on the classpath stays a map, as that read found it, and as this did.
-                ReadOptions lenient = new ReadOptionsBuilder(effectiveOptions).failOnUnknownType(false).build();
-                return JsonIo.toJava(JsonIo.toJson(jsonObject, null), lenient).asType(typeHolder);
+                return JsonIo.toJava(JsonIo.toJson(jsonObject, null), readingTreeText(readOptions)).asType(typeHolder);
+            }
+            ReadOptions effectiveOptions = readOptions;
+            if (!effectiveOptions.isReturningJavaObjects()) {
+                effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
             }
             return parseAndResolve(
                     effectiveOptions,
                     typeHolder.getType(),
-                    resolver -> jsonObject,  // No parsing needed - already have JsonObject
+                    (resolver, readType) -> jsonObject,  // No parsing needed - already have JsonObject
                     "Error converting JsonObject",
                     null);
         }
@@ -1858,9 +1878,9 @@ public class JsonIo {
                 return parseAndResolve(
                         readOptions,
                         typeHolder.getType(),
-                        resolver -> {
+                        (resolver, readType) -> {
                             ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
-                            Object parsed = parser.readValue(typeHolder.getType());
+                            Object parsed = parser.readValue(readType);
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
                             resolver.setToonNumbers(true);
                             return parsed;
@@ -1919,9 +1939,9 @@ public class JsonIo {
                 return parseAndResolve(
                         readOptions,
                         typeHolder.getType(),
-                        resolver -> {
+                        (resolver, readType) -> {
                             ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
-                            Object parsed = parser.readValue(typeHolder.getType());
+                            Object parsed = parser.readValue(readType);
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
                             resolver.setToonNumbers(true);
                             return parsed;

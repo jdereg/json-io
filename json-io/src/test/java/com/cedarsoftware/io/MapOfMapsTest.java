@@ -336,7 +336,9 @@ class MapOfMapsTest
         assertEquals("test object", map.get("_name"));
         assert map.get("_other") instanceof Map;
 
-        assertThrows(JsonIoException.class, () -> TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(TestObject.class));
+        // Its class asked for: built as Java mode builds it from the tree (it was refused, "rootType .. not supported")
+        TestObject asked = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsJsonObjects().build()).asClass(TestObject.class);
+        assert DeepEquals.deepEquals(testObj, asked);
 
         TestObject testObj1 = TestUtil.toJava(json, new ReadOptionsBuilder().build()).asClass(null);
         assert DeepEquals.deepEquals(testObj, testObj1);
