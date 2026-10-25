@@ -2149,7 +2149,11 @@ public class WriteOptionsBuilder {
 
     /**
      * @param maxObjectGraphDepth int maximum object graph depth allowed during serialization, JSON and TOON
-     *                            ({@link WriteOptions#getMaxObjectGraphDepth()}). Default is 100,000 levels.
+     *                            ({@link WriteOptions#getMaxObjectGraphDepth()}). Default is 100,000 levels. The depth
+     *                            is the nesting of objects and containers (lists, arrays, maps, Optionals), as
+     *                            Jackson's maxNestingDepth counts it: the root object or container is level 1, each
+     *                            one inside another one more; a scalar (a String, number, date, UUID, char[], a value
+     *                            of a non-referenceable class) adds none. The same with and without cycleSupport.
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder maxObjectGraphDepth(int maxObjectGraphDepth) {

@@ -565,6 +565,7 @@ public class ToonWriter implements Closeable, Flushable {
             if (objVisited != null) objVisited.clear();
             if (objsReferenced != null) objsReferenced.clear();
             if (activePath != null) activePath.clear();
+            inPlaceDepth = 0;
             nextIdentity = 1;
         }
     }
@@ -694,11 +695,13 @@ public class ToonWriter implements Closeable, Flushable {
             Object d = dataOf(value);
             if (isInPlace(d)) {
                 Object form = typeMetadataEnabled ? typedForm(d, contentTypeOf(value)) : d;
+                enterInPlace(1);    // the object, written as its content
                 if (form != d) {
                     writeMap((Map<?, ?>) form, false);     // {$type, value}: a whole-number Double's, say
                 } else {
                     writeValue(d);
                 }
+                exitInPlace(1);
                 return;
             }
         }
@@ -709,10 +712,29 @@ public class ToonWriter implements Closeable, Flushable {
         if (value == null || isPrimitive(value)) {
             return false;
         }
-        // When cycleSupport is off, skip the NonReferenceableClass lookup — it's only needed
-        // for $id/$ref decisions. Cycle detection via activePath only needs the isPrimitive() filter.
-        return !cycleSupport || !writeOptions.isNonReferenceableClass(value.getClass());
+        // When cycleSupport is off, the active path is the depth of maxObjectGraphDepth: a leaf -- a non-referenceable
+        // value -- is no level of it (nor can it form a cycle), as in JsonWriter. (A char[] is written as text before
+        // it would enter: isPrimitive.)
+        Class<?> c = value.getClass();
+        if (cycleSupport) {
+            return !writeOptions.isNonReferenceableClass(c);
+        }
+        Class<?>[] classes = referenceableClasses;      // the last classes asked about (a graph's come in runs)
+        for (int i = 0; i < 4; i++) {
+            if (classes[i] == c) {
+                return referenceable[i];
+            }
+        }
+        boolean answer = !writeOptions.isNonReferenceableClass(c);
+        int slot = nextReferenceable++ & 3;
+        referenceable[slot] = answer;
+        classes[slot] = c;
+        return answer;
     }
+
+    private final Class<?>[] referenceableClasses = new Class<?>[4];
+    private final boolean[] referenceable = new boolean[4];
+    private int nextReferenceable;
 
     private boolean isReferenceContainer(Object value) {
         return value instanceof Collection || (value != null && value.getClass().isArray());
@@ -1106,16 +1128,51 @@ public class ToonWriter implements Closeable, Flushable {
             return false;
         }
         activePath.put(value, Boolean.TRUE);
-        if (activePath.size() - 1 > traceMaxDepth) {
+        if (activePath.size() + inPlaceDepth > traceMaxDepth) {      // the root, first on the path, is level 1
             throw traceLimitReached();
         }
         return true;
     }
 
     private void exitActivePath(Object value) {
-        if (value != null && isReferenceable(value)) {
-            activePath.remove(value);
+        if (value != null) {
+            activePath.remove(value);       // (one never entered, a leaf, is not there: no look at its class)
         }
+    }
+
+    // Without cycleSupport, maxObjectGraphDepth is checked against the active path's length plus what TOON writes in
+    // place, past the path: a list or array a field holds ("key[N]:", "key: []"), an empty map ("key:"), an empty
+    // list in a list ("- [0]:"), a table's rows and their groups, a keyed table and its entries, the maps folded into
+    // a key, an Optional written as its content. Each is a level the trace and JSON count: uncounted, TOON's default
+    // refused a chain through lists at seven links where the trace refuses at three. (A map's $keys and $items are
+    // its keys and values, one level below it, as the trace counts them: no level of their own.)
+    private int inPlaceDepth;
+
+    /** {@code levels} more written in place; past maxObjectGraphDepth, the error. */
+    private void enterInPlace(int levels) {
+        if (!cycleSupport) {
+            inPlaceDepth += levels;
+            if (activePath.size() + inPlaceDepth > traceMaxDepth) {
+                throw traceLimitReached();
+            }
+        }
+    }
+
+    private void exitInPlace(int levels) {
+        if (!cycleSupport) {
+            inPlaceDepth -= levels;
+        }
+    }
+
+    /** A level written in place that holds nothing further (an empty list or map): checked. */
+    private void checkInPlace() {
+        enterInPlace(1);
+        exitInPlace(1);
+    }
+
+    /** The level a table's rows are, uniform as they are: none for a leaf class's (declared non-referenceable). */
+    private int rowLevel(Object row) {
+        return row == null || isReferenceable(row) ? 1 : 0;
     }
 
     private JsonIoException cycleDetected(Object value) {
@@ -2072,6 +2129,7 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeTabularRows(Collection<?> collection, List<String> keys) throws IOException {
         depth++;
+        enterInPlace(1);    // the rows
         for (Object element : collection) {
             out.write('\n');
             writeIndent();
@@ -2089,6 +2147,7 @@ public class ToonWriter implements Closeable, Flushable {
                 writeInlineValue(map.get(key));
             }
         }
+        exitInPlace(1);
         depth--;
     }
 
@@ -2322,11 +2381,14 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeTabularPOJORows(UniformPojoArrayData data, Collection<?> collection) throws IOException {
         depth++;
+        int rows = collection.isEmpty() ? 0 : rowLevel(collection.iterator().next());
+        enterInPlace(rows);
         for (Object element : collection) {
             out.write('\n');
             writeIndent();
             writeTabularPOJORow(data, element);
         }
+        exitInPlace(rows);
         depth--;
     }
 
@@ -2336,12 +2398,15 @@ public class ToonWriter implements Closeable, Flushable {
      */
     private void writeTabularPOJORowsFromArray(UniformPojoArrayData data, Object array, int length) throws IOException {
         depth++;
+        int rows = length == 0 ? 0 : rowLevel(getArrayElement(array, 0));
+        enterInPlace(rows);
         for (int i = 0; i < length; i++) {
             Object element = getArrayElement(array, i);
             out.write('\n');
             writeIndent();
             writeTabularPOJORow(data, element);
         }
+        exitInPlace(rows);
         depth--;
     }
 
@@ -2692,7 +2757,9 @@ public class ToonWriter implements Closeable, Flushable {
                 Object value = map.get(names[i]);
                 RowShape group = shape.group(i);
                 if (group != null) {
+                    enterInPlace(1);    // a group: an object in the row
                     first = writeCells(group, value, first);
+                    exitInPlace(1);
                     continue;
                 }
                 if (!first) {
@@ -2708,7 +2775,9 @@ public class ToonWriter implements Closeable, Flushable {
             WriteOptionsBuilder.WriteFieldPlan plan = plans[i];
             RowShape group = shape.group(i);
             if (group != null) {
+                enterInPlace(1);    // a group: an object in the row
                 first = writeCells(group, plan.accessor().retrieve(row), first);
+                exitInPlace(1);
                 continue;
             }
             if (!first) {
@@ -2734,6 +2803,7 @@ public class ToonWriter implements Closeable, Flushable {
         writeFieldList(shape);
         out.write(':');
         depth++;
+        // (its rows and their groups were each checked at their depth when tableShape read them, past the path)
         for (Object row : rows) {
             out.write('\n');
             writeIndent();
@@ -2919,6 +2989,8 @@ public class ToonWriter implements Closeable, Flushable {
         writeFieldList(table.shape);
         out.write(':');
         depth += levels;
+        int rows = table.values.length == 0 ? 0 : rowLevel(table.values[0]);
+        enterInPlace(rows);     // its entries
         for (int i = 0; i < table.keys.length; i++) {
             out.write('\n');
             writeIndent();
@@ -2927,6 +2999,7 @@ public class ToonWriter implements Closeable, Flushable {
             out.write(' ');
             writeCells(table.shape, table.values[i], true);
         }
+        exitInPlace(rows);
         depth -= levels;
     }
 
@@ -2949,7 +3022,9 @@ public class ToonWriter implements Closeable, Flushable {
         if (table == null) {
             return false;
         }
+        enterInPlace(1);    // the root, written as its entries
         writeKeyedTable(table, 1);
+        exitInPlace(1);
         return true;
     }
 
@@ -2996,6 +3071,7 @@ public class ToonWriter implements Closeable, Flushable {
                 // §9.1: empty array as a list element uses the legacy "[0]:" form on the
                 // hyphen line. The inline "[]" literal applies only to field-value position
                 // ("key: []"); a bare hyphen-line empty array stays in count-marker form.
+                checkInPlace();
                 out.write(" [0]:");
             } else {
                 out.write(" ");
@@ -3015,6 +3091,7 @@ public class ToonWriter implements Closeable, Flushable {
                 depth--;
             } else if (ArrayUtilities.getLength(element) == 0) {
                 // §9.1 list-element empty array — see Collection branch above.
+                checkInPlace();
                 out.write(" [0]:");
             } else {
                 out.write(" ");
@@ -3030,7 +3107,9 @@ public class ToonWriter implements Closeable, Flushable {
             Object inPlace = inPlaceOf(element);
             if (inPlace != element) {
                 lendIdentityToContent(element, inPlace);
+                enterInPlace(1);
                 writeListElement(inPlace, typeMetadataEnabled ? contentTypeOf(element) : Object.class);
+                exitInPlace(1);
                 return;
             }
             // Complex object - first field on hyphen line
@@ -3484,7 +3563,9 @@ public class ToonWriter implements Closeable, Flushable {
                 && !(cycleSupport && isReferenced(value))) {
             FoldedEntry folded = collectFoldedPath(keyStr, value);
             if (folded != null) {
+                enterInPlace(folded.maps);
                 writeFoldedEntry(folded.path, folded.value);
+                exitInPlace(folded.maps);
                 return;
             }
             if (lastFoldCollision) {
@@ -3526,13 +3607,16 @@ public class ToonWriter implements Closeable, Flushable {
                 if (length == 0) {
                     // §9.1: empty array as field value uses inline literal "key: []",
                     // not the legacy "key[0]:" form.
+                    checkInPlace();
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(": []");
                 } else {
                     // Combine key with array size: fieldName[N]:
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(countMarker(length));
+                    enterInPlace(1);
                     writeArrayElements(value, length);
+                    exitInPlace(1);
                 }
             }
         } else if (value instanceof Collection) {
@@ -3553,13 +3637,16 @@ public class ToonWriter implements Closeable, Flushable {
                 Collection<?> coll = (Collection<?>) value;
                 if (coll.isEmpty()) {
                     // §9.1: empty collection as field value uses inline literal "key: []".
+                    checkInPlace();
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(": []");
                 } else {
                     // Combine key with collection size: fieldName[N]: or fieldName[N]{cols}:
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(countMarker(coll.size()));
+                    enterInPlace(1);
                     writeCollectionElementsWithHeader(coll);
+                    exitInPlace(1);
                 }
             }
         } else {
@@ -3571,21 +3658,26 @@ public class ToonWriter implements Closeable, Flushable {
             Object inPlace = inPlaceOf(value);
             if (inPlace != value) {
                 lendIdentityToContent(value, inPlace);
+                enterInPlace(1);
                 writeFieldEntry(keyStr, inPlace, keyNeedsQuoting,
                         typeMetadataEnabled ? contentTypeOf(value) : Object.class);
+                exitInPlace(1);
                 return;
             }
             boolean typed = needsType(value.getClass(), declared);
             KeyedTable keyed = v4Forms && !typed ? keyedTable(value) : null;
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             if (keyed != null) {
+                enterInPlace(1);
                 writeKeyedTable(keyed, 1);      // spec 9.5: an object of uniform objects
+                exitInPlace(1);
                 return;
             }
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty() && !typed) {
                 // Empty map field value emits "key:" only — no body, no trailing "{}".
                 // Per §8: nested empty object is "key:" on its own line.
+                checkInPlace();
                 return;
             } else if (value != null && !isPrimitive(value)) {
                 // Nested object - newline, no trailing space after colon
@@ -3683,6 +3775,7 @@ public class ToonWriter implements Closeable, Flushable {
                 int length = ArrayUtilities.getLength(value);
                 if (length == 0) {
                     // §9.1 inline empty-array literal — see writeFieldEntry.
+                    checkInPlace();
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(": []");
                 } else {
@@ -3693,7 +3786,9 @@ public class ToonWriter implements Closeable, Flushable {
                     // below; without this, nested tabular rows under a list element wind up
                     // at the same indent as the list element's subsequent fields (wrong).
                     depth++;
+                    enterInPlace(1);
                     writeArrayElements(value, length);
+                    exitInPlace(1);
                     depth--;
                 }
             }
@@ -3714,13 +3809,16 @@ public class ToonWriter implements Closeable, Flushable {
                 Collection<?> coll = (Collection<?>) value;
                 if (coll.isEmpty()) {
                     // §9.1 inline empty-array literal — see writeFieldEntry.
+                    checkInPlace();
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(": []");
                 } else {
                     writeKeyStringKnown(keyStr, keyNeedsQuoting);
                     out.write(countMarker(coll.size()));
                     depth++;
+                    enterInPlace(1);
                     writeCollectionElementsWithHeader(coll);
+                    exitInPlace(1);
                     depth--;
                 }
             }
@@ -3733,20 +3831,25 @@ public class ToonWriter implements Closeable, Flushable {
             Object inPlace = inPlaceOf(value);
             if (inPlace != value) {
                 lendIdentityToContent(value, inPlace);
+                enterInPlace(1);
                 writeFieldEntryInline(keyStr, inPlace, keyNeedsQuoting,
                         typeMetadataEnabled ? contentTypeOf(value) : Object.class);
+                exitInPlace(1);
                 return;
             }
             boolean typed = needsType(value.getClass(), declared);
             KeyedTable keyed = v4Forms && !typed ? keyedTable(value) : null;
             writeKeyStringKnown(keyStr, keyNeedsQuoting);
             if (keyed != null) {
+                enterInPlace(1);
                 writeKeyedTable(keyed, 2);      // spec 9.5 and 10: its entry rows two levels below the hyphen
+                exitInPlace(1);
                 return;
             }
             out.write(":");
             if (value instanceof Map && ((Map<?, ?>) value).isEmpty() && !typed) {
                 // Empty map field value in inline list context: just "key:" — see writeFieldEntry.
+                checkInPlace();
                 return;
             } else if (value != null && !isPrimitive(value)) {
                 depth += 2;
@@ -3771,6 +3874,7 @@ public class ToonWriter implements Closeable, Flushable {
         if (value instanceof Map && ((Map<?, ?>) value).isEmpty()) {
             // §8 + §13.4: folded chain ending in an empty object emits bare "path:".
             // Mirrors the empty-map field-value behavior in writeFieldEntry.
+            checkInPlace();
             writeString(path);
             out.write(":");
             return;
@@ -3792,7 +3896,9 @@ public class ToonWriter implements Closeable, Flushable {
                 int length = ArrayUtilities.getLength(value);
                 writeString(path);
                 out.write(countMarker(length));
+                enterInPlace(1);
                 writeArrayElements(value, length);
+                exitInPlace(1);
             }
         } else if (value instanceof Collection) {
             boolean typed = needsType(value.getClass(), Object.class);
@@ -3808,7 +3914,9 @@ public class ToonWriter implements Closeable, Flushable {
                 Collection<?> coll = (Collection<?>) value;
                 writeString(path);
                 out.write(countMarker(coll.size()));
+                enterInPlace(1);
                 writeCollectionElementsWithHeader(coll);
+                exitInPlace(1);
             }
         } else if (value instanceof Map) {
             // Non-foldable map at the end of the chain
@@ -3865,7 +3973,7 @@ public class ToonWriter implements Closeable, Flushable {
         if (typeMetadataEnabled) {
             elementType = keyType;
         }
-        writeCollectionElementsWithHeader(keys);
+        writeCollectionElementsWithHeader(keys);    // (the map's keys, one level below it: no level of their own)
         out.write('\n');
         writeIndent();
         out.write(itemsKey);
@@ -4610,10 +4718,14 @@ public class ToonWriter implements Closeable, Flushable {
         if (candidate == null) {
             return;
         }
-        if (++traceCount > traceMaxObjects || traceDepth >= traceMaxDepth) {    // its depth is traceDepth + 1
+        if (++traceCount > traceMaxObjects) {
             throw traceLimitReached();
         }
+        // A leaf is no level of maxObjectGraphDepth, the longest chain of objects and containers (see JsonWriter)
         if (!isPrimitive(candidate) && !writeOptions.isNonReferenceableClass(candidate.getClass())) {
+            if (traceDepth + 1 >= traceMaxDepth && candidate.getClass() != char[].class) {   // level traceDepth + 2
+                throw traceLimitReached();
+            }
             stack.addFirst(candidate);
             pushTraceDepth(traceDepth + 1);
         }
@@ -4694,6 +4806,7 @@ public class ToonWriter implements Closeable, Flushable {
         StringBuilder path = new StringBuilder(firstKey);
         Object current = value;
         Map<Object, Boolean> seen = new IdentityHashMap<>();
+        int maps = 0;
 
         while (current instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) current;
@@ -4710,6 +4823,7 @@ public class ToonWriter implements Closeable, Flushable {
             String key = (String) entry.getKey();
             path.append('.').append(key);
             current = entry.getValue();
+            maps++;
         }
 
         // Only fold if we actually folded something (path contains a dot)
@@ -4723,7 +4837,7 @@ public class ToonWriter implements Closeable, Flushable {
                 lastFoldCollision = true;
                 return null;
             }
-            return new FoldedEntry(pathStr, current);
+            return new FoldedEntry(pathStr, current, maps);
         }
         return null;
     }
@@ -4746,10 +4860,12 @@ public class ToonWriter implements Closeable, Flushable {
     private static class FoldedEntry {
         final String path;
         final Object value;
+        final int maps;     // the maps folded into the path, each a level of maxObjectGraphDepth
 
-        FoldedEntry(String path, Object value) {
+        FoldedEntry(String path, Object value, int maps) {
             this.path = path;
             this.value = value;
+            this.maps = maps;
         }
     }
 

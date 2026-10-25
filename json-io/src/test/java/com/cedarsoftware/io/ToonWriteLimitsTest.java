@@ -45,7 +45,7 @@ class ToonWriteLimitsTest {
         public List<Node> nodes = new ArrayList<>();
     }
 
-    /** A head and {@code links} more nodes: the last is {@code links} levels below the head. */
+    /** A head and {@code links} more nodes: {@code links + 1} levels deep (the head, the root, is level 1). */
     private static Node chain(int links) {
         Node head = new Node();
         Node cur = head;
@@ -68,10 +68,10 @@ class ToonWriteLimitsTest {
     void depthAsJson() {
         WriteOptions limit = new WriteOptionsBuilder().maxObjectGraphDepth(200).build();
         // JSON and TOON agree where the limit falls
-        JsonIo.toJson(chain(200), limit);
-        JsonIo.toToon(chain(200), limit);
-        JsonIoException json = assertThrows(JsonIoException.class, () -> JsonIo.toJson(chain(201), limit));
-        JsonIoException toon = assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(201), limit));
+        JsonIo.toJson(chain(199), limit);
+        JsonIo.toToon(chain(199), limit);
+        JsonIoException json = assertThrows(JsonIoException.class, () -> JsonIo.toJson(chain(200), limit));
+        JsonIoException toon = assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(200), limit));
         assertEquals(json.getMessage(), toon.getMessage());
         assertTrue(toon.getMessage().startsWith("Object graph too deep (>200 levels)"), toon.getMessage());
     }
@@ -96,9 +96,9 @@ class ToonWriteLimitsTest {
         int count = defaults.getMaxObjectCount();
         try {
             WriteOptionsBuilder.addPermanentMaxObjectGraphDepth(50);
-            assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(51), null));      // TOON's default: no trace
-            assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(51), new WriteOptionsBuilder().build()));
-            JsonIo.toToon(chain(50), null);
+            assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(50), null));      // TOON's default: no trace
+            assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(50), new WriteOptionsBuilder().build()));
+            JsonIo.toToon(chain(49), null);
             WriteOptionsBuilder.addPermanentMaxObjectGraphDepth(depth);
             WriteOptionsBuilder.addPermanentMaxObjectCount(10);
             assertThrows(JsonIoException.class, () -> JsonIo.toToon(wide(100), new WriteOptionsBuilder().build()));
@@ -117,10 +117,10 @@ class ToonWriteLimitsTest {
     @Test
     void withoutCycleSupport() {
         WriteOptions noTrace = new WriteOptionsBuilder().cycleSupport(false).maxObjectGraphDepth(200).build();
-        JsonIo.toJson(chain(200), noTrace);
-        JsonIo.toToon(chain(200), noTrace);
-        JsonIoException json = assertThrows(JsonIoException.class, () -> JsonIo.toJson(chain(201), noTrace));
-        JsonIoException toon = assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(201), noTrace));
+        JsonIo.toJson(chain(199), noTrace);
+        JsonIo.toToon(chain(199), noTrace);
+        JsonIoException json = assertThrows(JsonIoException.class, () -> JsonIo.toJson(chain(200), noTrace));
+        JsonIoException toon = assertThrows(JsonIoException.class, () -> JsonIo.toToon(chain(200), noTrace));
         assertEquals(json.getMessage(), toon.getMessage());
         assertTrue(toon.getMessage().startsWith("Object graph too deep (>200 levels)"), toon.getMessage());
 

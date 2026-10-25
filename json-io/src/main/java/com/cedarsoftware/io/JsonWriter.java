@@ -360,6 +360,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     // The POJO collection elements on the path, which writeCollectionElement writes past it (cycleSupport=false):
     // counted toward maxObjectGraphDepth with it
     private int elementDepth;
+    private Class<?> lastElementClass;
+    private boolean lastElementLevel;
     private final Writer out;
     /**
      * Generator wrapping {@link #out} for the same {@link #writeOptions}. Owns
@@ -787,7 +789,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             showType = false;
         }
 
-        boolean enteredActivePath = !cycleSupport && isReferenceTrackable(o) && !activePath.containsKey(o);
+        // Entered on the active path (cycleSupport off) by writeOptionalReference, if the path grew: no second look at
+        // the class, nor at the path, here
+        final int pathBefore = cycleSupport ? -1 : activePath.size();
         try {
             if (writeOptionalReference(o)) {
                 return true;
@@ -867,7 +871,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeEndObjectRaw();
             return true;
         } finally {
-            if (enteredActivePath) {
+            if (pathBefore >= 0 && activePath.size() > pathBefore) {
                 activePath.remove(o);
             }
         }
@@ -933,7 +937,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             throw cycleDetected(obj);
         }
         activePath.put(obj, Boolean.TRUE);
-        if (activePath.size() + elementDepth - 1 > traceMaxDepth) {
+        if (activePath.size() + elementDepth > traceMaxDepth) {     // the root, first on the path, is level 1
             throw tooDeep(traceMaxDepth);
         }
     }
@@ -1028,9 +1032,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * Enforce DOS limits and push {@code o} onto the trace stack only if it can
      * actually participate in reference cycles. Non-referenceable leaves (Strings,
      * primitive wrappers, temporals, UUID, etc.) are counted toward the object-count
-     * limit and depth-checked so that DOS semantics are preserved, but they never
-     * land on the stack — saving a deque push + pop + isNonReferenceable re-check
-     * per leaf. Mirrors ToonWriter's pushReferenceCandidate pre-filter.
+     * limit, but they never land on the stack — saving a deque push + pop + isNonReferenceable re-check
+     * per leaf. Mirrors ToonWriter's pushReferenceCandidate pre-filter. Nor are they a level of
+     * maxObjectGraphDepth, the longest chain of objects and containers: a String in a list was counted one level
+     * below the list (a String in a field was not, nor is it without cycleSupport).
      */
     private void traceVisit(Object o, Deque<Object> stack, int depth) {
         if (o == null) {
@@ -1039,11 +1044,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (traceProcessedCount >= traceMaxObjects) {
             throw new JsonIoException("Object graph too large (>" + traceMaxObjects + " objects). This may indicate excessive nesting or a memory leak.");
         }
-        if (depth > traceMaxDepth) {
-            throw new JsonIoException("Object graph too deep (>" + traceMaxDepth + " levels). This may indicate a circular reference or excessively nested structure.");
-        }
         traceProcessedCount++;
         if (!writeOptions.isNonReferenceableClass(o.getClass())) {
+            if (depth >= traceMaxDepth && o.getClass() != char[].class) {    // depth 0, the root, is level 1
+                throw new JsonIoException("Object graph too deep (>" + traceMaxDepth + " levels). This may indicate a"
+                        + " circular reference or excessively nested structure.");
+            }
             stack.addFirst(o);
             pushDepth(depth);
         }
@@ -1269,10 +1275,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (obj == null) {
             return false;
         }
-        // When cycleSupport is off, skip the NonReferenceableClass lookup — it's only needed
-        // for $id/$ref decisions. Cycle detection via activePath doesn't need it since
-        // non-referenceable types (temporals, BigInteger, UUID, etc.) are leaf values that can't form cycles.
-        return !cycleSupport || !writeOptions.isNonReferenceableClass(obj.getClass());
+        // When cycleSupport is off, the active path is the depth of maxObjectGraphDepth: a leaf -- a non-referenceable
+        // value (temporals, BigInteger, UUID, ...), or a char[], written as text -- is no level of it (nor can it form
+        // a cycle). Entered, a UUID in a field was a level, in a list two, where the trace counts none.
+        return cycleSupport ? !writeOptions.isNonReferenceableClass(obj.getClass()) : !isLeaf(obj.getClass());
+    }
+
+    /** A value that is no level of maxObjectGraphDepth: it holds nothing further (a scalar, a char[]'s text). */
+    private boolean isLeaf(Class<?> c) {
+        return c == char[].class || writeOptions.isNonReferenceableClass(c);
     }
 
     private JsonIoException cycleDetected(Object obj) {
@@ -1393,7 +1404,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
-        boolean enteredActivePath = !cycleSupport && isReferenceTrackable(obj) && !activePath.containsKey(obj);
+        // Entered on the active path (cycleSupport off) by writeOptionalReference, if the path grew (see writeCustom)
+        final int pathBefore = cycleSupport ? -1 : activePath.size();
         try {
             // Custom writers and references are checked first to preserve type information
             if (writeUsingCustomWriter(obj, showType, out) || writeOptionalReference(obj)) {
@@ -1475,7 +1487,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     break;
             }
         } finally {
-            if (enteredActivePath) {
+            if (pathBefore >= 0 && activePath.size() > pathBefore) {
                 activePath.remove(obj);
             }
         }
@@ -2666,16 +2678,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 // needed — the outer state at gen.depth is preserved across the call.
                 // writeUsingCustomWriter (its writeCustom internal reset) operates at
                 // gen.depth=0 and doesn't touch contextStack[outer-depth].
-                // Counted toward maxObjectGraphDepth, as writeImpl's active path counts what it writes: uncounted, a
-                // graph through lists counted half the depth the trace (cycleSupport(true)) counts. (Reset with the
-                // path at the end of the write, so no finally.)
-                if (activePath.size() + ++elementDepth - 1 > traceMaxDepth) {
-                    throw tooDeep(traceMaxDepth);
-                }
-                if (!writeUsingCustomWriter(o, showType, out)) {
+                if (!writeUsingCustomWriter(o, showType, out)) {    // (a custom writer enters the path itself)
+                    // Counted toward maxObjectGraphDepth, as writeImpl's active path counts what it writes: uncounted,
+                    // a graph through lists counted half the depth the trace (cycleSupport(true)) counts. A leaf (a
+                    // non-referenceable class) is no level. (Reset with the path at the end of the write: no finally.)
+                    Class<?> elementClass = o.getClass();
+                    if (elementClass != lastElementClass) {     // a list is mostly of one class: asked once a run
+                        lastElementClass = elementClass;
+                        lastElementLevel = !isLeaf(elementClass);
+                    }
+                    boolean level = lastElementLevel;
+                    if (level && activePath.size() + ++elementDepth > traceMaxDepth) {
+                        throw tooDeep(traceMaxDepth);
+                    }
                     writeObject(o, showType, false);
+                    if (level) {
+                        elementDepth--;
+                    }
                 }
-                elementDepth--;
             } else {
                 writeImpl(o, showType);
             }
