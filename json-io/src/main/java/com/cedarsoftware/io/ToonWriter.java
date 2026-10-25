@@ -3442,7 +3442,9 @@ public class ToonWriter implements Closeable, Flushable {
         if (key instanceof Enum) {
             return isDataClass(key.getClass()) ? String.valueOf(dataOf(key)) : ((Enum<?>) key).name();
         }
-        return key.toString();
+        // a Class by its name, as it is written as a value and as JSON and Jackson write it as a key: its toString(),
+        // "class java.lang.String", did not read back ("Class not found")
+        return key instanceof Class ? ((Class<?>) key).getName() : key.toString();
     }
 
     /**
