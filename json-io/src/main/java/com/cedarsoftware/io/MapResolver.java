@@ -786,7 +786,16 @@ public class MapResolver extends Resolver {
     private void processJsonObjectElement(JsonObject jObj, JsonObject parent, Collection<Object> col,
                                           int idx, boolean isList, boolean isEnumSet) {
         if (jObj.isReference()) {
-            resolveReferenceInCollection(jObj, parent, col, idx, isList);
+            // The object the @ref names, in the tree as in a plain array: the tree kept the object holding the @ref,
+            // so written back it was {} and the object it named lost its @id. Every @id is known once the text is
+            // parsed, a forward one too. An object left JSON is the list's element itself (it was a null).
+            JsonObject named = resolveReference(jObj);
+            parent.getItems()[idx] = named;
+            if (staysJson(named)) {
+                col.add(named);
+            } else {
+                resolveReferenceInCollection(jObj, parent, col, idx, isList);
+            }
             return;
         }
 

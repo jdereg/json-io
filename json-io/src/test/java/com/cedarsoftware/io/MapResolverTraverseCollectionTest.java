@@ -59,11 +59,18 @@ class MapResolverTraverseCollectionTest {
         JsonObject refMissing = new JsonObject();
         refs.put(2L, refMissing);
 
+        JsonObject refUnbuiltList = JsonObject.newArrayInstance();     // a list not yet built: patched at the end
+        refUnbuiltList.setType(ArrayList.class);
+        refs.put(3L, refUnbuiltList);
+
         JsonObject elementRefResolved = new JsonObject();
         elementRefResolved.setReferenceId(1L);
 
         JsonObject elementRefMissing = new JsonObject();
         elementRefMissing.setReferenceId(2L);
+
+        JsonObject elementRefUnbuilt = new JsonObject();
+        elementRefUnbuilt.setReferenceId(3L);
 
         JsonObject nonRef = new JsonObject();
         nonRef.setType(String.class);
@@ -82,7 +89,8 @@ class MapResolverTraverseCollectionTest {
                 elementRefResolved,
                 elementRefMissing,
                 nonRef,
-                custom
+                custom,
+                elementRefUnbuilt
         };
         json.setItems(items);
 
@@ -95,9 +103,10 @@ class MapResolverTraverseCollectionTest {
         assertEquals(7L, list.get(3));
         assertTrue(list.get(4).getClass().isArray());
         assertEquals("target", list.get(5));
-        assertNull(list.get(6));
+        assertSame(refMissing, list.get(6));    // the object a @ref names, left JSON (it was a null, patched later)
         assertEquals("str", list.get(7));
         assertSame(custom, list.get(8));    // an object stays JSON in Maps mode (it was built, then lost: a null)
+        assertNull(list.get(9));
 
         assertEquals(1, resolver.unresolvedRefs.size());
     }
