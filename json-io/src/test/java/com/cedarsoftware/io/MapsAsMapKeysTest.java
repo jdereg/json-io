@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A map whose keys are maps reads back with every key, each found by {@code get}. A map is filled at the end of the
@@ -111,6 +113,91 @@ class MapsAsMapKeysTest {
         assertEquals(2, back.size());
         List<Object> values = Arrays.asList(back.values().toArray());
         assertEquals(Arrays.asList("a", "b"), values);
+    }
+
+    /**
+     * An untyped key is a LinkedHashMap, as Jackson reads it, so an equal map finds its entry: as a JsonObject (shallow
+     * hash, equal only to JsonObjects) it was not found. Its untyped objects too. In JSON and TOON, in a field and at
+     * the root, written by json-io without types or by hand.
+     */
+    @Test
+    void untypedMapKeysAreFoundByAnEqualMap() {
+        String json = "{\"@keys\":[{\"v\":\"k1\"},{\"v\":{\"in\":\"k2\"}}],\"@items\":[\"a\",\"b\"]}";
+        Map<String, Object> nested = new LinkedHashMap<>();
+        nested.put("v", Collections.singletonMap("in", "k2"));
+        Map<?, ?> back = JsonIo.toJava(json, null).asClass(Map.class);
+        assertEquals("a", back.get(map("k1")));
+        assertEquals("b", back.get(nested));
+        for (Object key : back.keySet()) {
+            assertSame(LinkedHashMap.class, key.getClass());
+        }
+        assertSame(LinkedHashMap.class, ((Map<?, ?>) back.keySet().toArray()[1]).get("v").getClass());
+
+        Map<Object, String> written = new LinkedHashMap<>();
+        written.put(map("k1"), "a");
+        written.put(nested, "b");
+        Holder holder = new Holder();
+        holder.keyed = written;
+        WriteOptions untyped = new WriteOptionsBuilder().showTypeInfoNever().build();
+        Holder fromJson = JsonIo.toJava(JsonIo.toJson(holder, untyped), null).asClass(Holder.class);
+        assertEquals("a", fromJson.keyed.get(map("k1")));
+        assertEquals("b", fromJson.keyed.get(nested));
+        Holder fromToon = JsonIo.fromToon(JsonIo.toToon(holder, null), null).asClass(Holder.class);
+        assertEquals("a", fromToon.keyed.get(map("k1")));
+        assertEquals("b", fromToon.keyed.get(nested));
+    }
+
+    public static class Holder {
+        public Map<Object, String> keyed;
+    }
+
+    public static class Point {
+        public int x;
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Point && ((Point) o).x == x;
+        }
+
+        @Override
+        public int hashCode() {
+            return x;
+        }
+    }
+
+    /** An object shared twice in a key (no cycle) is a map both times; a typed object in a key is that object. */
+    @Test
+    void sharedAndTypedObjectsInAnUntypedKey() {
+        String shared = "{\"@keys\":[{\"a\":{\"@id\":2,\"x\":1},\"b\":{\"@ref\":2}}],\"@items\":[\"s\"]}";
+        Map<String, Object> inner = Collections.singletonMap("x", 1L);
+        Map<String, Object> probe = new LinkedHashMap<>();
+        probe.put("a", inner);
+        probe.put("b", inner);
+        Map<?, ?> back = JsonIo.toJava(shared, null).asClass(Map.class);
+        assertSame(LinkedHashMap.class, back.keySet().iterator().next().getClass());
+        assertEquals("s", back.get(probe));
+
+        String typed = "{\"@keys\":[{\"p\":{\"@type\":\"" + Point.class.getName() + "\",\"x\":3}}],\"@items\":[\"t\"]}";
+        Point point = new Point();
+        point.x = 3;
+        back = JsonIo.toJava(typed, null).asClass(Map.class);
+        assertEquals("t", back.get(Collections.singletonMap("p", point)));
+    }
+
+    /** A key that holds itself keeps its JsonObject (a LinkedHashMap cannot hash a cycle); Maps mode keeps them all. */
+    @Test
+    void aCyclicKeyAndMapsModeKeepTheirObjects() {
+        String cyclic = "{\"@keys\":[{\"@id\":1,\"self\":{\"@ref\":1}}],\"@items\":[\"x\"]}";
+        Map<?, ?> back = JsonIo.toJava(cyclic, null).asClass(Map.class);
+        Object key = back.keySet().iterator().next();
+        assertSame(JsonObject.class, key.getClass());
+        assertSame(key, ((Map<?, ?>) key).get("self"));
+        assertEquals("x", back.get(key));
+
+        String json = "{\"@type\":\"" + Holder.class.getName()
+                + "\",\"keyed\":{\"@keys\":[{\"v\":\"k1\"}],\"@items\":[\"a\"]}}";
+        Map<?, ?> keyed = (Map<?, ?>) ((Map<?, ?>) JsonIo.toMaps(json, null).asClass(null)).get("keyed");
+        assertTrue(keyed.keySet().iterator().next() instanceof JsonObject);
     }
 
     /** A key that refers to a map defined elsewhere, before or after the map holding it: filled before that map. */

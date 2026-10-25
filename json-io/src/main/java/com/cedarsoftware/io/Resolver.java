@@ -2713,11 +2713,78 @@ public abstract class Resolver {
                 } else {
                     stack.pop();
                     if (filled.add(map)) {
+                        if (returningJavaObjects) {
+                            plainKeys(map, queued);
+                        }
                         map.rehashMaps();
                     }
                 }
             }
         }
+    }
+
+    /**
+     * A key that is an object the JSON gives no type, read in Java mode, as a LinkedHashMap of its entries -- an
+     * untyped object among them too -- as Jackson reads it: with Map's equality and hash, which a JsonObject's do not
+     * follow (its hash is shallow, its equals for JsonObjects alone, made for cyclic graphs), so a lookup with an
+     * equal map missed the entry. A key holding itself keeps its JsonObject: a LinkedHashMap cannot hash a cycle.
+     */
+    private static void plainKeys(JsonObject map, Map<Object, JsonObject> queued) {
+        Object[] keys = map.getKeys();
+        if (keys == null) {
+            return;
+        }
+        for (int i = 0; i < keys.length; i++) {
+            JsonObject key = untypedObject(keys[i], queued);
+            if (key != null) {
+                Map<Object, Object> plain = plainMap(key, Collections.newSetFromMap(new IdentityHashMap<>()), queued);
+                if (plain != null) {
+                    keys[i] = plain;
+                }
+            }
+        }
+    }
+
+    /**
+     * The untyped object that holds {@code value}'s entries, else null: the object read from the JSON, whose target --
+     * a JsonObject the maps' filling fills, after the map holding it as a key -- may be {@code value} ({@code queued}
+     * by what each fills).
+     */
+    private static JsonObject untypedObject(Object value, Map<Object, JsonObject> queued) {
+        JsonObject source = queued.get(value);
+        JsonObject obj = source != null ? source : value instanceof JsonObject ? (JsonObject) value : null;
+        return obj != null && isUntypedObject(obj) ? obj : null;
+    }
+
+    /**
+     * An object of entries the JSON names no class for -- typed by nothing, Object, or the JsonObject it is read as --
+     * not an array, not a map written as @keys/@items.
+     */
+    private static boolean isUntypedObject(JsonObject obj) {
+        Type type = obj.getType();
+        return (type == null || type == Object.class || type == JsonObject.class) && !obj.isArray()
+                && obj.getKeys() == null;
+    }
+
+    /** {@code obj}'s entries as a LinkedHashMap, an untyped object among them too; null where one holds itself. */
+    private static Map<Object, Object> plainMap(JsonObject obj, Set<JsonObject> path, Map<Object, JsonObject> queued) {
+        if (!path.add(obj)) {
+            return null;
+        }
+        Map<Object, Object> plain = new LinkedHashMap<>();
+        for (Map.Entry<Object, Object> entry : obj.entrySet()) {
+            Object value = entry.getValue();
+            JsonObject untyped = untypedObject(value, queued);
+            if (untyped != null) {
+                value = plainMap(untyped, path, queued);
+                if (value == null) {
+                    return null;
+                }
+            }
+            plain.put(entry.getKey(), value);
+        }
+        path.remove(obj);
+        return plain;
     }
 
     private static boolean hasMapKey(JsonObject map) {
