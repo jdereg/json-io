@@ -233,9 +233,14 @@ public class MapResolver extends Resolver {
                 JsonObject jObj = (JsonObject) element;
                 JsonObject refObject = resolveReference(jObj);
                 if (refObject != null) {
-                    array[i] = refObject;  // Patch the @ref
+                    array[i] = valueOf(refObject);  // Patch the @ref
                 } else {
-                    push(jObj);  // Traverse nested object
+                    Object value = valueOf(jObj);
+                    if (value != jObj) {
+                        array[i] = value;
+                    } else {
+                        push(jObj);  // Traverse nested object
+                    }
                 }
             } else if (element instanceof Object[]) {
                 // Recursively traverse nested arrays inline to avoid JsonObject allocation
@@ -262,9 +267,14 @@ public class MapResolver extends Resolver {
                 JsonObject jObj = (JsonObject) element;
                 JsonObject refObject = resolveReference(jObj);
                 if (refObject != null) {
-                    list.set(i, refObject);
+                    list.set(i, valueOf(refObject));
                 } else {
-                    push(jObj);
+                    Object value = valueOf(jObj);
+                    if (value != jObj) {
+                        list.set(i, value);
+                    } else {
+                        push(jObj);
+                    }
                 }
             } else if (element instanceof Object[]) {
                 traverseArrayForRefs((Object[]) element);
@@ -272,6 +282,24 @@ public class MapResolver extends Resolver {
                 traverseListForRefs((List<Object>) element);
             }
         }
+    }
+
+    /**
+     * A value json-io writes with its type ({"@type":"BigDecimal","value":"1.50"}, a date, a UUID, a Character) as
+     * a field holds it: the value, wherever it sits -- in a list or an array, a typed collection, a map's keys and
+     * values. It stayed the object holding it everywhere but in a field, at the root and in a root array. Any other
+     * object (an enum's too, for now) is returned as it is.
+     */
+    private Object valueOf(JsonObject jObj) {
+        Class<?> type = jObj.getRawType();
+        if (type == null || ClassUtilities.getClassIfEnum(type) != null || !getReadOptions().isNonReferenceableClass(type)
+                || !converter.isConversionSupportedFor(Map.class, type)) {
+            return jObj;
+        }
+        if (!jObj.isFinished() && jObj.getTarget() == null) {
+            jObj.setFinishedTarget(convertIfNonRefType(jObj, type), true);
+        }
+        return jObj.getTarget();
     }
 
     /**
@@ -790,7 +818,7 @@ public class MapResolver extends Resolver {
             // so written back it was {} and the object it named lost its @id. Every @id is known once the text is
             // parsed, a forward one too. An object left JSON is the list's element itself (it was a null).
             JsonObject named = resolveReference(jObj);
-            parent.getItems()[idx] = named;
+            parent.getItems()[idx] = valueOf(named);
             if (staysJson(named)) {
                 col.add(named);
             } else {
@@ -819,6 +847,10 @@ public class MapResolver extends Resolver {
             return;
         }
         createInstance(jObj);
+        Object value = valueOf(jObj);
+        if (value != jObj) {
+            parent.getItems()[idx] = value;     // the value, in the tree as in the list
+        }
         addResolvedObjectToCollection(jObj, col);
     }
 

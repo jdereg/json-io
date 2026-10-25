@@ -75,12 +75,12 @@ class MapKeyThatIsAMapTest {
 
     @Test
     void aMapKeyThatWrapsOneValueIsStringifiedAsBefore() {
-        // Read in Maps mode, a BigDecimal key is a JsonObject {"@type":"BigDecimal","value":"81598.5"}: its text is
-        // the BigDecimal's, as it was through 4.114.0
+        // Read in Maps mode, a BigDecimal key {"@type":"BigDecimal","value":"81598.5"} is the BigDecimal, as a field's
+        // value is (it was the JsonObject holding it): its text is the BigDecimal's, as it was through 4.114.0
         String json = "{\"@type\":\"LinkedHashMap\",\"@keys\":[{\"@type\":\"BigDecimal\",\"value\":\"81598.5\"},7],"
                 + "\"@items\":[\"x\",\"seven\"]}";
         Object maps = JsonIo.toMaps(json, null).asClass(null);
-        assertThat(((Map<?, ?>) maps).keySet().iterator().next()).isInstanceOf(JsonObject.class);
+        assertThat(((Map<?, ?>) maps).keySet().iterator().next()).isEqualTo(new java.math.BigDecimal("81598.5"));
         assertThat(JsonIo.toJson(maps, STRINGIFY)).isEqualTo("{\"81598.5\":\"x\",\"7\":\"seven\"}");
 
         Map<Object, Object> map = new LinkedHashMap<>();
