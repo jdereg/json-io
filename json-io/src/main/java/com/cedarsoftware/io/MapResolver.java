@@ -193,6 +193,7 @@ public class MapResolver extends Resolver {
      */
     @Override
     protected void traverseMap(JsonObject jsonObj) {
+        jsonObj.readAsMaps = true;
         // Guard against reprocessing already-finished objects
         if (jsonObj.isFinished) {
             return;
@@ -323,7 +324,8 @@ public class MapResolver extends Resolver {
             // Map itself asked for: the tree's own object, not a copy. A @ref to the root inside the tree is that
             // object, so a copy written back held the root twice, each with its own @id; and it was a second map to
             // keep in step. A concrete Map class (LinkedHashMap, TreeMap) is a copy into it, as before.
-            if (isMapItself(rootType) && result instanceof Map && rootObj.isMapShaped()) {
+            // JsonObject asked for: the root, whatever it holds (a typed collection too: it was a mismatch)
+            if (rootType == JsonObject.class || isMapItself(rootType) && result instanceof Map && rootObj.isMapShaped()) {
                 rootObj.collapseRepeatedKeys();     // as the copy did: a key the document repeats, once
                 return rootObj;
             }
@@ -363,7 +365,8 @@ public class MapResolver extends Resolver {
 
     /**
      * {@code Map}, or a {@code Map} of nothing more ({@code Map<String, Object>}, {@code Map<?, ?>}): a type every
-     * JsonObject is. A Map whose type arguments ask for more (typed values) is not.
+     * JsonObject is. A Map whose type arguments ask for more (typed values) is not. ({@code JsonObject} itself was a
+     * new, empty one where the root named a class not on the classpath.)
      */
     private static boolean isMapItself(Type rootType) {
         if (rootType == Map.class) {
@@ -434,12 +437,13 @@ public class MapResolver extends Resolver {
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
     public void traverseFields(final JsonObject jsonObj) {
+        jsonObj.readAsMaps = true;
         final Object target = jsonObj.getTarget();
         final ReadOptions readOptions = getReadOptions();
 
         // Get injector map directly - ReadOptions.getDeepInjectorMap() already caches per class
         Map<String, Injector> injectorMap = null;
-        if (target != null) {
+        if (target != null && !(target instanceof Map)) {    // a map's keys are its entries, not fields of its class
             // (an object of a class built from its parts is left unbuilt in this mode: its class types its fields)
             injectorMap = readOptions.getDeepInjectorMap(target == UNBUILT ? jsonObj.getRawType() : target.getClass());
         }
@@ -652,6 +656,7 @@ public class MapResolver extends Resolver {
     }
 
     protected void traverseArray(JsonObject jsonObj) {
+        jsonObj.readAsMaps = true;
         // Guard against reprocessing already-finished objects
         if (markFinishedIfNot(jsonObj)) {
             return;
@@ -799,6 +804,7 @@ public class MapResolver extends Resolver {
     @Override
     @SuppressWarnings("unchecked")  // raw Collection cast — JsonObject.getTarget()/createInstance return Object
     protected void traverseCollection(final JsonObject jsonObj) {
+        jsonObj.readAsMaps = true;
         // Guard against reprocessing already-finished objects
         if (markFinishedIfNot(jsonObj)) {
             return;

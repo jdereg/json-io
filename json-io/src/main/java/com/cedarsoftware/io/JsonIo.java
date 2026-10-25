@@ -164,12 +164,12 @@ import com.cedarsoftware.util.convert.Converter;
  * <h2>Advanced Usage</h2>
  * <p><b>Two-Phase Parsing:</b> Parse to Map first, then convert to Java objects:</p>
  * <pre>{@code
- * // Phase 1: Parse to Map (inspect/modify)
- * Map<String, Object> map = JsonIo.toMaps(jsonString).asClass(Map.class);
- * map.put("newField", "added value");
+ * // Phase 1: Parse to Maps (inspect/modify): the tree's root, a JsonObject (a Map)
+ * JsonObject tree = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
+ * tree.put("newField", "added value");
  *
- * // Phase 2: Convert to Java object
- * Person person = JsonIo.toJava((JsonObject) map, readOptions).asClass(Person.class);
+ * // Phase 2: Convert to a Java object -- as Java mode reads the tree's text
+ * Person person = JsonIo.toJava(tree, readOptions).asClass(Person.class);
  * }</pre>
  *
  * <p><i>Note: JsonIo includes extensive type conversion capabilities. To view all supported conversions,
@@ -986,17 +986,14 @@ public class JsonIo {
      *
      * <h3>Examples:</h3>
      * <pre>{@code
-     * // First parse JSON to a Map representation
-     * ReadOptions mapOptions = new ReadOptionsBuilder()
-     *                              .returnAsJsonObjects()
-     *                              .build();
-     * Map<String, Object> jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+     * // First parse JSON to Maps: the tree's root, a JsonObject (a Map)
+     * JsonObject tree = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
      *
      * // Modify the map structure if needed
-     * jsonMap.put("extraProperty", "new value");
+     * tree.put("extraProperty", "new value");
      *
-     * // Then convert the modified structure to Java objects
-     * Person person = JsonIo.toJava(jsonMap, readOptions).asClass(Person.class);
+     * // Then convert the modified structure to Java objects -- as Java mode reads the tree's text
+     * Person person = JsonIo.toJava(tree, readOptions).asClass(Person.class);
      * }</pre>
      *
      * @param jsonObject the JsonObject (typically a Map) to convert; must not be null
@@ -1751,17 +1748,14 @@ public class JsonIo {
          *
          * <h3>Example:</h3>
          * <pre>{@code
-         * // First parse JSON to a Map representation
-         * ReadOptions mapOptions = new ReadOptionsBuilder()
-         *                              .returnAsJsonObjects()
-         *                              .build();
-         * Map<String, Object> jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+         * // First parse JSON to Maps: the tree's root, a JsonObject (a Map)
+         * JsonObject tree = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
          *
          * // Modify the map
-         * jsonMap.put("age", 31);
+         * tree.put("age", 31);
          *
-         * // Then convert to a Java object
-         * Person person = JsonIo.toJava(jsonMap, readOptions).asClass(Person.class);
+         * // Then convert to a Java object -- as Java mode reads the tree's text
+         * Person person = JsonIo.toJava(tree, readOptions).asClass(Person.class);
          * }</pre>
          *
          * @param <T> the type to convert the JsonObject to
@@ -1784,15 +1778,12 @@ public class JsonIo {
          *
          * <h3>Example:</h3>
          * <pre>{@code
-         * // First parse JSON to a Map representation
-         * ReadOptions mapOptions = new ReadOptionsBuilder()
-         *                              .returnAsJsonObjects()
-         *                              .build();
-         * Map<String, Object> jsonMap = JsonIo.toJava(jsonString, mapOptions).asClass(Map.class);
+         * // First parse JSON to Maps: the tree's root, a JsonObject (a Map)
+         * JsonObject tree = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
          *
-         * // Then convert to a generic collection
-         * List<Person> people = JsonIo.toJava(jsonMap, readOptions)
-         *                             .asType(new TypeHolder<List<Person>>(){});
+         * // Then convert to a generic type
+         * Map<String, List<Person>> teams = JsonIo.toJava(tree, readOptions)
+         *                                         .asType(new TypeHolder<Map<String, List<Person>>>(){});
          * }</pre>
          *
          * @param <T> the type to convert the JsonObject to
@@ -1804,6 +1795,14 @@ public class JsonIo {
             ReadOptions effectiveOptions = readOptions;
             if (!effectiveOptions.isReturningJavaObjects()) {
                 effectiveOptions = new ReadOptionsBuilder(effectiveOptions).returnAsJavaObjects().build();
+            }
+            if (jsonObject.readAsMaps) {
+                // A tree a Maps-mode read gave, changed or not: read as Java mode reads its text. Its objects carry that
+                // read's state -- a root typed Object hid the class asked for ("Return type mismatch .. found
+                // JsonObject"), a map or list held its own copy of its items (an empty map, a null in an array). A class
+                // the tree names that is not on the classpath stays a map, as that read found it, and as this did.
+                ReadOptions lenient = new ReadOptionsBuilder(effectiveOptions).failOnUnknownType(false).build();
+                return JsonIo.toJava(JsonIo.toJson(jsonObject, null), lenient).asType(typeHolder);
             }
             return parseAndResolve(
                     effectiveOptions,

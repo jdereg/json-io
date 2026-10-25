@@ -101,6 +101,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     private String typeString;
     byte jsonTypeCache;
 
+    // Set on every object a Maps-mode read gives (MapResolver): such a tree, or a part of it, is read by
+    // JsonIo.toJava(JsonObject, ..) as Java mode reads its text -- its objects carry that read's state (a type of Object,
+    // a container's copy of its items), which Java mode would otherwise take for its own.
+    boolean readAsMaps;
+
     // Stored element type for collections/arrays (or value type for maps).
     // Used to preserve generic type information that would otherwise be lost
     // when createInstance changes the type to a concrete class.
