@@ -148,15 +148,51 @@ class JsonObjectMap extends JsonObject {
         return false;
     }
 
+    /**
+     * A key's value replaced, or a new entry added at the end: written back, the map holds it. A map with keys that
+     * are not text (@keys/@items) could not be changed: put and remove were refused (4.102.0-4.117.0); before that
+     * put lost the value or scrambled the keys. The arrays stay exact, as the writer reads them whole: an entry added
+     * or removed copies them.
+     */
     @Override
     public Object put(Object key, Object value) {
-        // JsonObjectMap is built bulk via setKeys/setItems; per-entry mutation isn't supported.
-        throw new JsonIoException("put is not supported on JsonObjectMap; use setKeys/setItems");
+        int idx = indexOfMapKey(key);
+        if (idx >= 0) {
+            Object old = valuesRef[idx];
+            valuesRef[idx] = value;
+            return old;
+        }
+        int len = size();
+        Object[] keys = new Object[len + 1];
+        Object[] values = new Object[len + 1];
+        if (len > 0) {
+            System.arraycopy(keysRef, 0, keys, 0, len);
+            System.arraycopy(valuesRef, 0, values, 0, len);
+        }
+        keys[len] = key;
+        values[len] = value;
+        keysRef = keys;
+        valuesRef = values;
+        return null;
     }
 
     @Override
     public Object remove(Object key) {
-        throw new JsonIoException("remove is not supported on JsonObjectMap");
+        int idx = indexOfMapKey(key);
+        if (idx < 0) {
+            return null;
+        }
+        Object old = valuesRef[idx];
+        int len = size();
+        Object[] keys = new Object[len - 1];
+        Object[] values = new Object[len - 1];
+        System.arraycopy(keysRef, 0, keys, 0, idx);
+        System.arraycopy(keysRef, idx + 1, keys, idx, len - idx - 1);
+        System.arraycopy(valuesRef, 0, values, 0, idx);
+        System.arraycopy(valuesRef, idx + 1, values, idx, len - idx - 1);
+        keysRef = keys;
+        valuesRef = values;
+        return old;
     }
 
     private int indexOfMapKey(Object key) {
