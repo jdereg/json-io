@@ -1682,7 +1682,7 @@ public abstract class Resolver {
             resolver.createInstanceUsingType(jsonObj);
 
     /**
-     * The target of an object Maps mode leaves unbuilt (see {@link #isBuiltFromParts}): its class, not an instance,
+     * The target of an object Maps mode leaves unbuilt (see {@link #isObjectOfAClass}): its class, not an instance,
      * types its fields. Cleared with the target of every other object once its fields are read.
      */
     static final Object UNBUILT = new Object();
@@ -1690,18 +1690,12 @@ public abstract class Resolver {
     private static final InstantiationPlan UNBUILT_PLAN = (jsonObj, resolver, targetType) -> jsonObj.setTarget(UNBUILT);
 
     /**
-     * True for a class json-io builds from its parts: a record (by json-io's {@link RecordFactory}), an
-     * {@code @IoCreator} or an {@code @IoValue} class. Not a map or collection, nor a class another factory builds.
+     * True for the class of an object with fields: not a map, a collection, an array or Object (nor a value type or
+     * an enum, planned before this is asked).
      */
-    private static boolean isBuiltFromParts(Class<?> c, ClassFactory factory) {
-        if (Map.class.isAssignableFrom(c) || Collection.class.isAssignableFrom(c)) {
-            return false;
-        }
-        if (factory != null) {
-            return factory instanceof RecordFactory;
-        }
-        AnnotationResolver.ClassAnnotationMetadata meta = AnnotationResolver.getMetadata(c);
-        return meta.getCreator() != null || meta.getValueCreator() != null;
+    private static boolean isObjectOfAClass(Class<?> c) {
+        return !Map.class.isAssignableFrom(c) && !Collection.class.isAssignableFrom(c) && !c.isArray()
+                && c != Object.class;
     }
 
     /** A map or collection interface or abstract class: the container the Converter builds for it. */
@@ -1808,10 +1802,12 @@ public abstract class Resolver {
             }
         }
 
-        // 4a. Maps mode keeps an object a map, so one built from its parts -- a record, an @IoCreator or @IoValue
-        //     class -- is not built: its parts stay maps, which its constructor does not take. Its instance served only
-        //     to type its fields, and its class does that (MapResolver.traverseFields).
-        if (readOptions.isReturningJsonObjects() && isBuiltFromParts(targetType, factory)) {
+        // 4a. Maps mode keeps an object a map, so it builds no object of a class, not by its factory either: the
+        //     instance served only to type the object's fields, and its class does that (MapResolver.traverseFields).
+        //     Building one ran its constructor and static initializer, and one that could not be built (a constructor
+        //     that validates its arguments) failed the read. A record, an @IoCreator or @IoValue class was left unbuilt
+        //     already: its parts stay maps, which its constructor does not take.
+        if (readOptions.isReturningJsonObjects() && isObjectOfAClass(targetType)) {
             return UNBUILT_PLAN;
         }
         if (factory != null) {
