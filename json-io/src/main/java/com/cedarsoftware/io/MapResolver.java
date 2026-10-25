@@ -4,7 +4,9 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -318,6 +320,13 @@ public class MapResolver extends Resolver {
         // If user specified a rootType, don't apply Maps mode handling here
         // The type compatibility checking happens in Resolver.handleObjectRoot
         if (rootType != null) {
+            // Map itself asked for: the tree's own object, not a copy. A @ref to the root inside the tree is that
+            // object, so a copy written back held the root twice, each with its own @id; and it was a second map to
+            // keep in step. A concrete Map class (LinkedHashMap, TreeMap) is a copy into it, as before.
+            if (isMapItself(rootType) && result instanceof Map && rootObj.isMapShaped()) {
+                rootObj.collapseRepeatedKeys();     // as the copy did: a key the document repeats, once
+                return rootObj;
+            }
             return result;
         }
 
@@ -350,6 +359,27 @@ public class MapResolver extends Resolver {
 
         // Return primitive results directly, otherwise return the raw JsonObject
         return isBuiltInPrimitive(result, converter) ? result : rootObj;
+    }
+
+    /**
+     * {@code Map}, or a {@code Map} of nothing more ({@code Map<String, Object>}, {@code Map<?, ?>}): a type every
+     * JsonObject is. A Map whose type arguments ask for more (typed values) is not.
+     */
+    private static boolean isMapItself(Type rootType) {
+        if (rootType == Map.class) {
+            return true;
+        }
+        if (!(rootType instanceof ParameterizedType) || ((ParameterizedType) rootType).getRawType() != Map.class) {
+            return false;
+        }
+        Type[] args = ((ParameterizedType) rootType).getActualTypeArguments();
+        return isAnything(args[0]) || args[0] == String.class ? isAnything(args[1]) : false;
+    }
+
+    private static boolean isAnything(Type type) {
+        return type == Object.class || type instanceof WildcardType
+                && ((WildcardType) type).getUpperBounds()[0] == Object.class
+                && ((WildcardType) type).getLowerBounds().length == 0;
     }
 
     /**

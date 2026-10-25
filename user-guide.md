@@ -87,7 +87,9 @@ Map<String, Object> root = JsonIo.toMaps(json, readOptions).asClass(Map.class);
 The `toMaps()` API automatically configures the reader for Map mode and allows unknown `@type` values to be parsed
 successfully. It returns a `JsonValue` builder that allows you to extract the result as any type (Map, List, primitives, etc.).
 The parsed structure forms a graph consisting of `Map` instances (actually `JsonObject` with deterministic
-LinkedHashMap ordering), arrays, and primitive types.
+LinkedHashMap ordering), arrays, and primitive types. `asClass(Map.class)` is the graph's own root object -- change it
+and write it back -- while a concrete class (`asClass(LinkedHashMap.class)`, `asClass(TreeMap.class)`) is a copy into
+that class. A `JsonObject` follows the `Map` contract: it equals any `Map` with the same entries, in any order.
 
 ### Representation of JSON Structures as Maps
 When `Map` is returned, the root value can represent one of the following:

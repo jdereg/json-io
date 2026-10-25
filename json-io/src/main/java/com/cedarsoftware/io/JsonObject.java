@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -432,6 +433,35 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
         size++;
         hash = null;
+    }
+
+    /**
+     * A key the document repeated, once: its last value, where the key first stood -- as {@code LinkedHashMap.put}
+     * leaves it. The parser appends a repeated key again ({@link #appendFieldForParser}); this map then held it twice,
+     * its size and keys counting both. Nothing is allocated when no key repeats.
+     */
+    void collapseRepeatedKeys() {
+        boolean repeated = false;
+        for (int i = 0; i < size && !repeated; i++) {
+            repeated = indexOf(keys[i]) != i;   // a lookup finds a key's last position
+        }
+        if (!repeated) {
+            return;
+        }
+        Map<Object, Object> entries = new LinkedHashMap<>(size * 2);
+        for (int i = 0; i < size; i++) {
+            entries.put(keys[i], data[i]);
+        }
+        Arrays.fill(keys, 0, size, null);
+        Arrays.fill(data, 0, size, null);
+        size = 0;
+        index = null;
+        hash = null;
+        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            keys[size] = entry.getKey();
+            data[size] = entry.getValue();
+            size++;
+        }
     }
 
     @Override
