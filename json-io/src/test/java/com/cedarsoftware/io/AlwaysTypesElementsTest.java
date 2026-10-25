@@ -183,6 +183,7 @@ class AlwaysTypesElementsTest {
         assertTrue(json.contains("\"emails\":[\"a@x.com\"]"), json);
         assertTrue(json.contains("\"uuids\":[\"" + ID + "\"]"), json);
         assertTrue(json.contains("\"pointValues\":{\"k\":{\"x\":1}}"), json);
-        assertTrue(json.contains("\"shades\":[{\"@type\":\"" + Shade.class.getName() + "\""), json);   // as before
+        // an enum of the declared enum: its name, as in a field (since EnumElementOfDeclaredTypeTest's change)
+        assertTrue(json.contains("\"shades\":[\"DARK\"]"), json);
     }
 }

@@ -2750,13 +2750,27 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (alwaysShowingType) {
             return isForceType(elementClass, declaredElementType);
         }
-        // Enums always need @type for proper deserialization (written as String, need type to convert back)
-        if (elementClass.isEnum()) {
-            return true;
-        }
         // Must be exact match (==), not isAssignableFrom
         // This ensures the Resolver can instantiate the correct concrete type
         if (elementClass == declaredElementType) {
+            // An enum of the declared type too: its name (or @IoValue value), read by the declared type, as in a field
+            // or an array, as TOON and Jackson write it. 4.112.0's text, kept by showTypeInfoMinimalLegacy(), typed it.
+            return !naturalDefaults && elementClass.isEnum();
+        }
+        return showTypeForOtherElement(elementClass);
+    }
+
+    /**
+     * {@link #shouldShowTypeForElement} for an element of a class other than the declared one: out of the method a
+     * list of the declared class calls for every element, which stays small for the JIT.
+     */
+    private boolean showTypeForOtherElement(Class<?> elementClass) {
+        // Any other enum needs its @type (written as text, it reads as the declared type)
+        if (elementClass.isEnum()) {
+            return true;
+        }
+        // A constant with a body, of the declared enum: as its enum
+        if (naturalDefaults && declaredElementType.isEnum() && elementClass.getSuperclass() == declaredElementType) {
             return false;
         }
         // Minimal (not legacy): treat natural defaults as matching (e.g., ArrayList for List element type)
