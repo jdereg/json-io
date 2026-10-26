@@ -736,14 +736,14 @@ public class WritersTest {
 
     @Test
     void testGMTHandling() {
-        // Test reading GMT and writing as Etc/GMT
+        // GMT reads back as GMT
         ZonedDateTime gmtInput = ZonedDateTime.parse("2024-02-02T12:00:00Z[GMT]");
         String json = JsonIo.toJson(gmtInput, WriteOptionsBuilder.getDefaultWriteOptions());
         ZonedDateTime restored = JsonIo.toJava(json, ReadOptionsBuilder.getDefaultReadOptions()).asClass(ZonedDateTime.class);
 
         // Instead of checking the JSON string directly, verify the restored object
-        assertEquals("Etc/GMT", restored.getZone().getId());
-        assertEquals(gmtInput.toInstant(), restored.toInstant());
+        assertEquals("GMT", restored.getZone().getId());
+        assertEquals(gmtInput, restored);
 
         // Test that we can read both formats
         ZonedDateTime fromGMT = JsonIo.toJava(
@@ -756,9 +756,9 @@ public class WritersTest {
                 ReadOptionsBuilder.getDefaultReadOptions()
         ).asClass(ZonedDateTime.class);
 
-        // Verify both parse to the same instant and normalized zone
+        // Verify both parse to the same instant, each in the zone it names
         assertEquals(fromGMT.toInstant(), fromEtcGMT.toInstant());
-        assertEquals(fromGMT.getZone(), fromEtcGMT.getZone());
-        assertEquals("Etc/GMT", fromGMT.getZone().getId());
+        assertEquals("GMT", fromGMT.getZone().getId());
+        assertEquals("Etc/GMT", fromEtcGMT.getZone().getId());
     }
 }

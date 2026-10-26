@@ -114,6 +114,33 @@ class ZonedDateTimeZoneWrittenTest {
         }
     }
 
+    /**
+     * Each zone reads back as written wherever it stands: an Object field, a list, the root and a Map mode tree read it
+     * through the Converter, which gave an offset as GMT+05:00 and GMT as Etc/GMT.
+     */
+    @Test
+    void everyZoneReadsBackWhereverItStands() {
+        List<String> wrong = new ArrayList<>();
+        for (ZoneId zone : ZONES) {
+            ZonedDateTime at = at(zone);
+            Meeting meeting = meeting(zone);
+            meeting.any = at;
+            meeting.list.add(at);
+            String json = JsonIo.toJson(meeting, null);
+            Meeting read = JsonIo.toJava(json, null).asClass(Meeting.class);
+            Map<?, ?> tree = JsonIo.toMaps(json, null).asClass(Map.class);
+            Meeting again = JsonIo.toJava(JsonIo.toJson(tree, null), null).asClass(Meeting.class);
+            Object[] places = {read.at, read.any, read.list.get(0), again.at, again.any, again.list.get(0),
+                    JsonIo.toJava(JsonIo.toJson(at, null), null).asClass(ZonedDateTime.class)};
+            for (int i = 0; i < places.length; i++) {
+                if (!at.equals(places[i])) {
+                    wrong.add(zone.getId() + " in place " + i + ": " + places[i]);
+                }
+            }
+        }
+        assertTrue(wrong.isEmpty(), wrong.toString());
+    }
+
     private static Meeting meeting(ZoneId zone) {
         Meeting meeting = new Meeting();
         meeting.at = at(zone);
