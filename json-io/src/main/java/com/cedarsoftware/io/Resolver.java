@@ -31,6 +31,7 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
@@ -149,6 +150,8 @@ public abstract class Resolver {
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     // traverseJsonObject calls under way: only the outermost names where in the document a failure stands
     private int traversals;
+    // The outermost traversal's root: where a map filled afterward (cleanup) stands is found from it
+    private JsonObject documentRoot;
     private final List<JsonObject> mapsToRehash = new ArrayList<>();
     // The objects whose creator is running: an argument that refers to one of them cannot be given to it
     private Set<JsonObject> creating;
@@ -1329,7 +1332,9 @@ public abstract class Resolver {
      */
     public <T> T traverseJsonObject(JsonObject root) {
         push(root);
-        traversals++;
+        if (traversals++ == 0) {
+            documentRoot = root;
+        }
         try {
             while (!stack.isEmpty()) {
                 final JsonObject jsonObj = stack.pop();
@@ -2767,7 +2772,7 @@ public abstract class Resolver {
         }
         if (i == n) {
             for (int j = from; j < n; j++) {
-                mapsToRehash.get(j).rehashMaps();
+                fill(mapsToRehash.get(j));
             }
             return;
         }
@@ -2778,7 +2783,7 @@ public abstract class Resolver {
         for (int j = from; j < n; j++) {
             JsonObject map = mapsToRehash.get(j);
             if (!hasMapKey(map)) {
-                map.rehashMaps();
+                fill(map);
                 filled.add(map);
             }
         }
@@ -2812,11 +2817,52 @@ public abstract class Resolver {
                 } else {
                     stack.pop();
                     if (filled.add(map)) {
-                        map.rehashMaps();
+                        fill(map);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * A map filled with its entries. Where its class refuses one -- a TreeMap whose keys do not compare with one
+     * another (a map, an object of a class that is not Comparable, a number beside text) -- an error naming the map,
+     * the key and where it stands. It was the map's own exception (a ClassCastException), escaping the read unwrapped:
+     * maps are filled after the traversal, as the read ends.
+     */
+    private void fill(JsonObject map) {
+        try {
+            map.rehashMaps();
+        } catch (RuntimeException e) {
+            Object target = map.getTarget();
+            String reason = e.getMessage();
+            if (target instanceof SortedMap && e instanceof ClassCastException) {
+                Object key = firstIncomparableKey(map);
+                reason = "its keys must compare with one another"
+                        + (key == null ? "" : ", and a " + key.getClass().getName() + " is not Comparable");
+            }
+            String message = "Cannot fill a " + (target == null ? "map" : target.getClass().getName())
+                    + " with its entries: " + reason;
+            String path = documentRoot == null ? null : DocumentPath.of(documentRoot, map, Collections.emptyList());
+            throw new JsonIoException(path == null || path.equals("$") ? message : message + " (at " + path + ")", e);
+        }
+    }
+
+    /** The first of a map's keys, as it fills them in, that is not Comparable; null where each is. */
+    private static Object firstIncomparableKey(JsonObject map) {
+        Object[] keys = map.getKeys() != null ? map.getKeys() : map.asTwoArrays().getKey();
+        int len = map.getKeys() != null ? keys.length : map.fastEntryCount();
+        for (int i = 0; i < len; i++) {
+            Object key = keys[i];
+            if (key instanceof JsonObject) {
+                JsonObject jObj = (JsonObject) key;
+                key = jObj.getTarget() != null ? jObj.getTarget() : jObj.hasValue() ? jObj.getValue() : jObj;
+            }
+            if (key != null && !(key instanceof Comparable)) {
+                return key;
+            }
+        }
+        return null;
     }
 
     private static boolean hasMapKey(JsonObject map) {
