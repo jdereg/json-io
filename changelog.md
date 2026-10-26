@@ -1,6 +1,46 @@
 ### Revision History
 
 #### 4.118.0 - (unreleased)
+**Upgrading from 4.117.0 -- what can change a result.** Each row is pinned by `UpgradeTo4118NotesTest`; every
+example gave the 4.117.0 answer shown. json-io reads and converts through java-util, whose 4.118.0 has its own table
+(ZonedDateTime zones, `parseToMinimalNumericType`, an object's reference loop as a Map): see java-util's
+[changelog](https://github.com/jdereg/java-util/blob/master/changelog.md). Map mode's rules are in the user guide's
+"What a Map Mode Tree Holds". The entries below have the details.
+
+| Area | 4.117.0 | 4.118.0 |
+|---|---|---|
+| Map mode: `asClass(Map.class)` | a `LinkedHashMap` copy of the tree's root | the root `JsonObject` itself: change it and write it back |
+| Map mode: a `JsonObject` compared with a `Map` | not equal to a `LinkedHashMap` with the same entries; another hash | equal, in any order, with the same hash (the Map contract) |
+| Map mode: a typed value in a list, a typed list or a map key (`[{"@type":"UUID","value":"..."}]`) | a `JsonObject` holding `value` | the `UUID`, as in a field |
+| Map mode: a simple enum on the classpath, written with its type, in a list | a `JsonObject` holding `name` | the constant, as in a field |
+| Map mode: an object of a class on the classpath inside a typed collection (`{"@type":"ArrayList","@items":[{"@type":"com.acme.Person","age":3}]}`) | typed by its class: `age` an `Integer` | JSON, as in a field: `age` a `Long` |
+| Map mode: the root's `@type` class | constructed; one that could not be built failed the read | never constructed (its fields still take the class's types) |
+| Map mode: a JSON object with fields asked for as a `List`, `Set` or array | an empty list | `JsonIoException` |
+| Map mode: `asType(List<LocalDate>)` on `["2024-01-15"]` | Strings | `LocalDate`s: the root's type arguments convert its values |
+| Map mode: a value below the root that does not convert (`{"@type":"BigDecimal","value":"abc"}`) | the read failed | the JSON stays as written; the read goes on |
+| Map mode: a `@ref` inside a typed collection | an empty `JsonObject` | the object it names |
+| Map mode: `JsonIo.toJava(tree, options).asClass(Person.class)` | "Return type mismatch" | the `Person` Java mode reads from the tree |
+| Map mode, written back: a number past a long (or a decimal read with `floatPointBigDecimal()`) in a tree read from plain JSON | `{"@type":"BigInteger","value":"..."}` (a JSON string with `showTypeInfoNever()`) | the JSON number it was read from |
+| A conversion registered from `Map` to a class (`addConverterOverride(Map.class, Policy.class, ..)`) | never used for a JSON object: the class's constructors ran | used first, before the class factory |
+| A key repeated in one object (`{"a":1,"b":2,"a":3}`) | held twice (size 3, written back twice) | once: the last value where the key first stood; `strictJson()` refuses it |
+| A JSON object with fields where a list, set or array is declared | an empty list | `JsonIoException` "... (at $.lines)" |
+| A read that fails | the message named the class and field | its first line ends with where: "(at $.lines[1].qty)" |
+| A JSON object where an `Optional` is declared (`{"who":{"name":"Ann"}}`) | `Optional.empty()` | the Optional holding it, as Jackson reads it |
+| Blank text in a list of a class (`{"people":[""]}`) | dropped: an empty list | `null` in its place |
+| Java mode, `failOnUnknownType(false)`: an unknown class holding `@items` | an empty map, the items lost | its items, by the type its place declares |
+| `strictJson()`: `007`, `-.5`, `1.e20`, an unescaped tab, `\'` | accepted | refused, as RFC 8259 does |
+| `floatPointBoth()` (and TOON) on `0.30000000000000004` | a `BigDecimal` | a `Double` (java-util's `parseToMinimalNumericType`) |
+| A `ZonedDateTime` written by 4.x with an offset zone (`"...+05:00[+05:00]"`), at the root or where `Object` is declared | `JsonIoException` | read |
+| A `ZonedDateTime` in an offset zone, written | `"...Z[UTC]"` for `Z` (read back as the region UTC), `"...+05:00[+05:00]"` | `"...Z"`, `"...+05:00"`: as ISO-8601 and `toString()` write it |
+| An `Integer` (`Short`, `Byte`, `Float`, `Character`, `AtomicInteger`) put into a `JsonObject` where no class declares the field | `{"n":5}`, read back as a `Long` | `{"n":{"@type":"Integer","value":5}}`; `putAsJson()` stores the JSON form |
+| An enum in a declared `List<Status>` (a set, a map's values or `@keys`) | `[{"@type":"com.acme.Status","name":"NEW"}]` | `["NEW"]` |
+| An enum constant with a body (`A { .. }`) | named by its own class (`Rich$1`), with `@id`/`@ref` | named by its enum |
+| `showTypeInfoAlways()`: the elements of a declared collection | no `@type` | `@type` on each |
+| A `BigDecimal` with a negative scale (`1E+3`) | `"1000"` | `"1E+3"` |
+| A `Character` in a Map or Collection with `showTypeInfoNever()` | `{"v":x}`, not JSON | `{"v":"x"}` |
+| A String with an unpaired surrogate | written as `?` | escaped (`"\ud800"`); reads back |
+| TOON with type info: a whole-number `Double` where nothing declares the type | `1`, read back a `Long` | carries `$type`; reads back a `Double` |
+
 * **BUILD**: `java-util` 4.117.0 → **4.118.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.118.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
 * **BUG FIX**: Strict JSON mode now rejects numbers such as `1.e20`, where an exponent with multiple digits previously hid the missing fractional digit. Both the streaming tokenizer and object reader enforce this check; permissive JSON5 parsing is unchanged.
 * **BUG FIX**: **Strict JSON mode refuses leading zeros and `-.5`.** RFC 8259 writes the integer part of a number as `0` alone or as a digit 1-9 followed by digits, with a digit right after the minus sign. `strictJson()` accepted `01`, `-01`, `00`, `007` and `00.5` (reading 1, -1, 0, 7 and 0.5), and accepted `-.5` while refusing `.5`. Now each is a parse error, "Leading zeros not allowed in strict JSON mode" or "Leading decimal point not allowed in strict JSON mode", through `JsonIo.createTokenizer()` and `JsonIo.toJava()` alike. Non-strict reading is unchanged: `01` is 1 and `-.5` is -0.5. Found while reviewing #439 (the entry above).
@@ -304,7 +344,7 @@
     All 3 fail on the previous code. 7 mutants: 5 caught at first, and 1 more once a test was added for a stand-in that holds items. The last, the type name kept without a type, makes no difference a read can see, so that change was reverted.
 * **BUG FIX**: **A `Character` in a Map or a Collection, written with `showTypeInfoNever()`, is JSON text: `{"v":"x"}`.** Before, it was written as its `toString()`, giving `{"v":x}` and `[x]`. That isn't JSON, and json-io couldn't read it back ("Unknown JSON value type"). This was so in every release; a Character in a field or an `Object[]` was already written as text. A quote, a backslash or a control character is now escaped as in any string. With type info the output is unchanged: `{"@type":"Character","value":"x"}`.
   * **Tests.** `CharacterWithoutTypeInfoTest` (3): a Map, a List, a Set and a JsonObject tree, read back; the escaped characters; type info unchanged. 2 fail on the previous code. 1 mutant, caught.
-* **BUG FIX**: **A `ZonedDateTime` whose zone is an offset reads back** (with java-util 4.118.0). json-io wrote `ZonedDateTime.of(.., ZoneOffset.of("+05:00"))` as `{"zonedDateTime":"2026-01-15T10:00:00+05:00[+05:00]"}`, and in every 4.x release it couldn't read that back, at the root, in a field or in a Map mode tree (`Issue parsing date-time, other characters present: [+05:00]`). java-util now reads the bracketed offset, which also fixes text already written by earlier releases. The value read has the same instant and offset, with zone `GMT+05:00`, which is how java-util reads an offset without the bracket. json-io now writes such a zone as the offset alone (see the entry on the zone `Z`), which every release reads; this fix is for the text earlier releases wrote.
+* **BUG FIX**: **A `ZonedDateTime` whose zone is an offset reads back** (with java-util 4.118.0). json-io wrote `ZonedDateTime.of(.., ZoneOffset.of("+05:00"))` as `{"zonedDateTime":"2026-01-15T10:00:00+05:00[+05:00]"}`, and in every 4.x release it couldn't read that back, at the root, in a field or in a Map mode tree (`Issue parsing date-time, other characters present: [+05:00]`). java-util now reads the bracketed offset, which also fixes text already written by earlier releases. The value read is the one written: zone `+05:00`, since java-util 4.118.0 reads ISO text in the zone it names. json-io now writes such a zone as the offset alone (see the entry on the zone `Z`), which every release reads; this fix is for the text earlier releases wrote.
   * **Tests.** `ZonedDateTimeOffsetZoneTest` (1): four offsets at the root, in a typed field, in an `Object` field and in a Map mode tree. It fails with java-util 4.117.0.
 * **DOCS**: **The user guide says how a typed value in a Map mode tree is written back:** in json-io's own form. Text json-io wrote comes back unchanged. A value in another spelling json-io accepts comes back in json-io's spelling, with the same value: `{"@type":"LocalDate","value":"2026-01-15"}` is rewritten as `{"@type":"LocalDate","localDate":"2026-01-15"}`. The tree holds the LocalDate, not the key it was written under.
 * **BUG FIX**: **A `JsonObject` holding `@items` hashes like an equal one after its items change in place.** It cached its hash, and `getItems()` returns the array itself. So after `getItems()[0] = x` it kept the old hash while being equal to an object holding the new items, and a `HashSet` or `HashMap` holding it could no longer find it. In 4.117.0 too. The hash is now computed on each call. It doesn't descend, so it costs one pass over the items, and json-io never hashes a JsonObject while reading or writing.
