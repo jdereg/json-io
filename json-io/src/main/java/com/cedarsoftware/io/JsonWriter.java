@@ -2264,13 +2264,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             } else if (value instanceof Boolean) {
                 gen.writeBoolean((Boolean) value);
-            } else if (value instanceof Number) {
+            } else if (value instanceof Long || value instanceof Double) {
                 gen.writeNumber(Writers.numberText((Number) value));   // its toString() form, a double's the same on every JDK
             } else if (value instanceof String) {
                 gen.writeString((String) value);
-            } else if (value instanceof Character) {
-                gen.writeString(String.valueOf(value));
             } else {
+                // With its type unless the object's class, written with it, declares the field's: an Integer, a Float,
+                // a Character too, as a Map or a List writes one -- written bare it read back as JSON's own Long, Double
+                // or String
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
             }
         }
@@ -2304,7 +2305,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (type != null) {
             Map<String, Field> fieldMap = writeOptions.getDeepDeclaredFields(type);
             Field field = fieldMap.get(fieldName);
-            return field != null && field.getType().equals(value.getClass());
+            // an int field holds an Integer
+            return field != null && ClassUtilities.toPrimitiveWrapperClass(field.getType()).equals(value.getClass());
         }
         return false;
     }

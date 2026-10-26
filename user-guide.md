@@ -126,7 +126,8 @@ When `Map` is returned, the root value can represent one of the following:
 This `Map` representation can be rewritten to a JSON String or Stream, ensuring that the output JSON will match the
 original input JSON stream. This feature is especially useful for handling JSON strings or streams containing class
 references not present in the JVM parsing the JSON. It allows complete reading and potential manipulation of the content,
-followed by rewriting the String or stream, providing a robust solution for dynamic data handling.
+followed by rewriting the String or stream, providing a robust solution for dynamic data handling. A typed value the
+JSON holds ({"@type":"Integer","value":5}, a date, a UUID) is the value in the tree, and is written back with its type.
 
 _Example: Manipulate JSON without having the referenced classes_
 ```java
