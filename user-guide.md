@@ -59,48 +59,72 @@ List<Employee> list = JsonIo.toJava(stream, readOptions).asType(new TypeHolder<L
 In this example, an `InputStream` is supplying the JSON.
 
 ### Untyped Usage (Map Mode)
-**json-io** provides two distinct modes for reading JSON. In addition to typed Java objects, you can use the **Map Mode**
-which returns a generic `Map<String, Object>` graph without requiring Java classes on the classpath.
-
-**Use `toMaps()` for class-independent JSON parsing:**
+**json-io** reads JSON two ways. Java mode (`toJava()`) builds your classes. **Map mode** (`toMaps()`) builds none: it
+reads any JSON into maps, arrays and JSON's own values, without the classes the JSON names on the classpath. A service
+that has none of the payload's classes can read the JSON, look at it, change a value and write it back. Because it
+builds no objects, it is also the faster read when you don't need the classes.
 
 ```java
-// Parse JSON object to Map
+// A JSON object as a Map
 Map<String, Object> root = JsonIo.toMaps(json).asClass(Map.class);
 
-// Parse JSON array to List
+// A JSON array as a List
 List<Object> list = JsonIo.toMaps("[1,2,3]").asClass(List.class);
 
-// Parse any JSON type (primitives, objects, arrays)
+// Any JSON value: a JsonObject, an Object[], a String, a Long, ...
 Object result = JsonIo.toMaps(json).asClass(null);
 
-// Or from InputStream
-Map<String, Object> root = JsonIo.toMaps(inputStream).asClass(Map.class);
+// From an InputStream, with options
+Map<String, Object> fromStream = JsonIo.toMaps(inputStream, readOptions).asClass(Map.class);
 
-// With custom options
-ReadOptions readOptions = new ReadOptionsBuilder()
-    .aliasTypeName("OldClass", "NewClass")
-    .build();
-Map<String, Object> root = JsonIo.toMaps(json, readOptions).asClass(Map.class);
+// TOON
+Map<String, Object> fromToon = JsonIo.fromToonToMaps(toon, readOptions).asClass(Map.class);
 ```
 
-The `toMaps()` API automatically configures the reader for Map mode and allows unknown `@type` values to be parsed
-successfully. It returns a `JsonValue` builder that allows you to extract the result as any type (Map, List, primitives, etc.).
-The parsed structure forms a graph consisting of `Map` instances (actually `JsonObject` with deterministic
-LinkedHashMap ordering), arrays, and primitive types. `asClass(Map.class)` is the graph's own root object -- change it
-and write it back -- while a concrete class (`asClass(LinkedHashMap.class)`, `asClass(TreeMap.class)`) is a copy into
-that class. A `JsonObject` follows the `Map` contract: it equals any `Map` with the same entries, in any order.
+### What a Map Mode Tree Holds
+| The JSON | In the tree |
+|---|---|
+| An object `{...}` | A `JsonObject`: a `Map` with its keys in the document's order. A repeated key keeps its last value. It equals any `Map` with the same entries. Its `@type`, if any, is kept as text: `getTypeString()`. |
+| An array `[...]` | An `Object[]`. |
+| A typed collection or array: `{"@type":"ArrayList","@items":[...]}` | A `JsonObject` holding the elements: `getItems()`. |
+| A map with keys that are not text (`@keys` and `@items`) | A `JsonObject` keyed by those keys. |
+| A whole number | A `Long`, or a `BigInteger` past a long's range (always a `BigInteger` with `integerTypeBigInteger()`). |
+| A decimal | A `Double` (a `BigDecimal`, its scale kept, with `floatPointBigDecimal()`). |
+| Text, `true`/`false`, `null` | `String`, `Boolean`, `null`. |
+| A typed value: `{"@type":"Integer","value":5}`, `{"@type":"ZonedDateTime","zonedDateTime":"..."}`, a UUID, a `Date`, a `Class`; any type the Converter knows | That value, wherever it stands: a field, a list, a typed list, a map key, the root. |
+| An enum constant: `{"@type":"com.acme.Status","name":"NEW"}` | The constant when the enum is on the classpath and simple: no instance fields and no constant with a body (every JDK enum is). Otherwise the `JsonObject`, as written. |
+| `{"@ref":n}` | The object with `"@id":n` itself. Shared objects and cycles stay shared, in a typed list too. |
+
+A TOON read differs in two places: an array is a `List`, and a decimal that a `double` cannot hold exactly is a
+`BigDecimal`.
+
+The rules behind the table:
+- **No class is built.** An object whose `@type` names a class stays a `JsonObject`, at the root and below it. The class
+  is not constructed, and its static initializer does not run. Its fields keep the JSON's values: numbers `Long`,
+  dates text.
+- **The same JSON gives the same tree with or without its classes, with three exceptions:**
+  - A simple enum present on the classpath is its constant; absent, it stays the `JsonObject`.
+  - When the root's `@type` names a class on the classpath, the root's own fields take the types that class declares:
+    `"age":30` is an `Integer` for an `int age`, `"born":"1990-05-01"` a `LocalDate`. The object itself is still a
+    `JsonObject`, and the objects below it are untouched.
+  - What `asClass()` or `asType()` asks for at the root (next section).
+- **A value that does not convert stays as written.** `{"@type":"BigDecimal","value":"abc"}`, a date that is no date, a
+  constant its enum does not have, or `"three"` where the root's class declares an `int` stays the JSON that holds it.
+  The read goes on, and written back the text is the same. (An `EnumSet` holding a name its enum does not have is an
+  error, naming it.)
+- **At the root, with no type asked**, an array the JSON types (`{"@type":"int[]","@items":[1,2]}`) is that array; a
+  typed collection stays a `JsonObject`, as below the root.
+
+`MapsModeContractTest` pins these rules case by case, with the classes present and absent.
 
 ### Asking Map Mode for a Type at the Root
-`asClass()` and `asType()` shape the root; below it the tree stays JSON. A value below the root that does not convert
--- `{"@type":"BigDecimal","value":"abc"}`, a date that is no date, a constant its enum does not have, `"three"` where
-the root's `@type` class declares an `int` -- stays the JSON that holds it, as written: the read goes on, and written
-back the text is the same. (An EnumSet holding a name its enum does not have is an error, naming it.) The root is the
-type asked for, or a `JsonIoException` naming why the JSON cannot be it, as in Java mode:
+`asClass()` and `asType()` shape the root; below it the tree stays JSON. The root is the type asked for, or a
+`JsonIoException` naming why the JSON cannot be it, as in Java mode:
 - **A value type or an array** (`Integer`, `LocalDate`, `ZonedDateTime`, an enum; `LocalDate[]`, `int[]`, `Map[]`):
   converted from the JSON value or array.
-- **`Map`, `List`, `Set`, or a concrete Map or Collection class**: the tree's root, or a copy into that class. A JSON
-  object is not a list: asked for as one, it is an error.
+- **`Map` or `JsonObject`**: the tree's root object itself. Change it and write it back.
+- **`List`, `Set`, or a concrete Map or Collection class** (`LinkedHashMap`, `TreeMap`, `ArrayList`): a copy into that
+  class. A JSON object is not a list: asked for as one, it is an error.
 - **A class** (`Person`, `Person[]`, `Optional<Person>`), **or type arguments that ask for more than JSON's own values**
   (`List<LocalDate>`, `Map<String, Person>`): built as Java mode builds them from the tree -- a conversion registered
   from `Map` to the class, its `ClassFactory`, a creator, its constructors. A class the tree names that is not on the
@@ -116,50 +140,44 @@ try {
 }
 ```
 
-### Representation of JSON Structures as Maps
-When `Map` is returned, the root value can represent one of the following:
-- **JSON Object (`{...}`)**: Transformed into a `Map` that represents any JSON object `{...}`.
-- **JSON Array (`[...]`)**: Represented as a `Map` with a key of `@items` which holds the list representing the JSON array `[...]`.
-- **JSON Primitive**: Such as boolean (true/false), null, numbers (long, double), and strings, directly represented as their Java equivalents.
-
 ### Manipulating and Rewriting JSON
-This `Map` representation can be rewritten to a JSON String or Stream, ensuring that the output JSON will match the
-original input JSON stream. This feature is especially useful for handling JSON strings or streams containing class
-references not present in the JVM parsing the JSON. It allows complete reading and potential manipulation of the content,
-followed by rewriting the String or stream, providing a robust solution for dynamic data handling. A typed value the
-JSON holds ({"@type":"Integer","value":5}, a date, a UUID) is the value in the tree, and is written back with its type,
-in the form json-io writes. Text json-io wrote comes back unchanged. A typed value in another spelling json-io accepts
-comes back in json-io's own spelling: `{"@type":"LocalDate","value":"2026-01-15"}` is rewritten as
-`{"@type":"LocalDate","localDate":"2026-01-15"}`, the same value. The tree holds the value, not the spelling.
+A tree written back holds the JSON it was read from, even JSON naming classes the JVM does not have, so the content
+can be read, changed and passed on. Text json-io wrote comes back unchanged. (With `showTypeInfoAlways()` and the
+classes present, a value in a field its class declares is written without its `@type`; it reads back the same.) Plain
+JSON comes back with the same values, each written in json-io's form: `1.10` read as a `Double` is written `1.1` (read
+it with `floatPointBigDecimal()` to keep the digits), `1e2` as `100.0`, an escape such as `\u00e9` as its character.
 
-Plain JSON, which names no `@type` (what most services and data tools write), comes back with its numbers as numbers.
-A number too large for a `long` is a `BigInteger` in the tree, and with `floatPointBigDecimal()` every decimal is a
-`BigDecimal`; written back, each is the JSON number it was read from, in objects and arrays alike, with or without type
-info: `123456789012345678901234567890` and `1.10` stay as they are, the scale kept. A `BigInteger` or `BigDecimal`
-anywhere else (in JSON that names a type, which json-io wrote, or in a `JsonObject` you built) is written as json-io
-writes one, with its type where no class declares it, so it reads back as that class. One you put into a tree read
-from plain JSON is written as that tree's numbers are. A root that is itself a number, or an array of numbers, is
-written with its type.
-
-_Example: Manipulate JSON without having the referenced classes_
+_Example: change JSON without the classes it names_
 ```java
-// Read JSON into Map structure (no classes required!)
 Map<String, Object> jsonMap = JsonIo.toMaps(jsonString).asClass(Map.class);
 
-// Manipulate values
 jsonMap.put("name", "John Doe");
-((Map)jsonMap.get("address")).put("city", "New York");
+((Map<String, Object>) jsonMap.get("address")).put("city", "New York");
 
-// Write back to JSON
 String updatedJson = JsonIo.toJson(jsonMap, writeOptions);
 ```
 
-Each `JsonObject` retains the raw `@type` value from the input JSON. You can safely cast to `JsonObject`
-to access this metadata:
-```java
-JsonObject obj = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
-String originalType = obj.getTypeString();  // Preserved @type value
-```
+- **Typed values.** A typed value the JSON holds (`{"@type":"Integer","value":5}`, a date, a UUID) is the value in the
+  tree, and is written back with its type, in the form json-io writes. A typed value in another spelling json-io
+  accepts comes back in json-io's own spelling: `{"@type":"LocalDate","value":"2026-01-15"}` is rewritten as
+  `{"@type":"LocalDate","localDate":"2026-01-15"}`, the same value. The tree holds the value, not the spelling.
+- **Plain JSON keeps its numbers as numbers.** Plain JSON names no `@type`; most services and data tools write it. A
+  number too large for a `long` is a `BigInteger` in the tree, and with `floatPointBigDecimal()` every decimal is a
+  `BigDecimal`. Written back, each is the JSON number it was read from, in objects and arrays alike, with or without
+  type info: `123456789012345678901234567890` and `1.10` stay as they are, the scale kept.
+  - A `BigInteger` or `BigDecimal` anywhere else (in JSON that names a type, which json-io wrote, or in a `JsonObject`
+    you built) is written as json-io writes one: with its type where no class declares it, so it reads back as that
+    class.
+  - One you put into a tree read from plain JSON is written as that tree's numbers are.
+  - A root that is itself a number, or an array of numbers, is written with its type.
+- **What you put in.** `put()` stores the Java value, and json-io writes it as it writes that value: an `Integer`, a
+  `LocalDate` or a `ZonedDateTime` with its `@type` where no class declares the field. To store the JSON form instead
+  -- `4`, `"2026-02-01"` -- use `putAsJson()` (next section).
+- **Each `JsonObject` keeps the `@type` it was read with**, as text:
+  ```java
+  JsonObject obj = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
+  String originalType = obj.getTypeString();
+  ```
 
 ### Typed Values: `get(key, Class)` and `putAsJson(key, value)`
 A Map mode tree holds JSON's own values: a number is a `Long` or a `Double`, a date or a UUID is text. So a cast fails
@@ -196,34 +214,25 @@ String updated = JsonIo.toJson(order, writeOptions);
     `Character`, a `Locale`, a URI. The Converter is the one the getters use.
   - **Containers**: a Map becomes a `JsonObject` with text keys, a Collection or array becomes an `Object[]`, and an
     `Optional` becomes its content or null. Their contents are converted the same way.
-  - **Any other object**: a `JsonObject` of its fields.
+  - **Any other object**: a `JsonObject` of its fields. An object whose fields lead back to itself is refused, since
+    plain JSON has no references.
 
   Plain `put()` still stores the Java value, which json-io writes with its type. Use it for trees that go back to
   json-io.
 
-### Parsing JSON with Unknown Classes
-If the JSON contains class references (`@type` entries) that are not available on the classpath,
-use the `toMaps()` API which automatically handles unknown types gracefully:
-
+### Map Mode Options
+`toMaps()` uses the `ReadOptions` you give it, in Map mode: the aliases, the conversions you add, the number options
+above, the security limits. It reads a `@type` that names no class on the classpath without complaint, since that is
+what Map mode is for. To refuse one instead, build the options for Map mode and ask for it:
 ```java
-// Simple - automatically allows unknown types
-Map<String, Object> graph = JsonIo.toMaps(json).asClass(Map.class);
-```
-
-The `toMaps()` method automatically configures the reader to skip type resolution and return a graph of `Map`
-instances. This allows arbitrary JSON to be loaded, inspected, and re-serialized without requiring the
-referenced classes on the classpath.
-
-All objects will be represented as Maps (or collections) so the entire structure can be traversed or modified.
-The original `@type` strings are preserved in the JsonObject metadata for later use if needed.
-
-**Advanced:** If you need strict type validation even in Map mode, you can override the default:
-```java
-ReadOptions opts = new ReadOptionsBuilder()
-        .failOnUnknownType(true)  // Override default
+ReadOptions strict = new ReadOptionsBuilder()
+        .returnAsJsonObjects()          // Map mode, which allows unknown types
+        .failOnUnknownType(true)        // then refuse them
         .build();
-Map<String, Object> graph = JsonIo.toMaps(json, opts).asClass(Map.class);  // Will throw if unknown @type found
+Map<String, Object> graph = JsonIo.toMaps(json, strict).asClass(Map.class);   // throws on an unknown @type
 ```
+`failOnUnknownType(true)` on options built for Java mode does not carry into `toMaps()`: it is Java mode's default, so
+`toMaps()` cannot tell it from options that never asked.
 
 ### When a Read Fails
 A read that cannot be done throws a `JsonIoException` saying what failed and where in the document: its message's

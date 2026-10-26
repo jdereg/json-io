@@ -778,29 +778,25 @@ public class JsonIo {
     /**
      * Parses JSON into a {@code Map<String, Object>} graph without requiring Java classes on classpath.
      * <p>
-     * This method provides a class-independent way to parse any JSON structure. The returned Map uses
-     * deterministic ordering (LinkedHashMap) and preserves JSON structure including:
+     * This method provides a class-independent way to parse any JSON structure, keeping its order:
      * <ul>
-     *   <li>Objects → {@code Map<String, Object>}</li>
+     *   <li>Objects → {@link JsonObject}, a {@code Map}</li>
      *   <li>Arrays → {@code Object[]}</li>
      *   <li>Primitives → Long, Double, Boolean, String</li>
      * </ul>
-     * <p>
-     * <b>Implementation Note:</b> The actual return type is {@link JsonObject} (which extends LinkedHashMap).
-     * This means you can safely cast to JsonObject to access preserved metadata:
+     * The user guide's "What a Map Mode Tree Holds" gives the rules in full.
      * <pre>{@code
      * // Access as Map
-     * Map<String, Object> map = JsonIo.toMaps(jsonString);
+     * Map<String, Object> map = JsonIo.toMaps(jsonString).asClass(Map.class);
      * String name = (String) map.get("name");
      *
      * // Access metadata (advanced usage)
-     * JsonObject obj = (JsonObject) JsonIo.toMaps(jsonString);
+     * JsonObject obj = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
      * String originalType = obj.getTypeString();  // Preserved @type value even if class doesn't exist
      * }</pre>
      * <p>
-     * <b>Key Feature:</b> This method automatically sets {@code failOnUnknownType(false)}, allowing
-     * JSON with unknown {@code @type} entries to be parsed successfully. The original type strings
-     * are preserved in the JsonObject for later use.
+     * <b>Key Feature:</b> JSON with {@code @type} entries naming classes that are not on the classpath is
+     * parsed successfully. The original type strings are preserved in the JsonObject for later use.
      * <p>
      * <b>Use this when:</b>
      * <ul>
@@ -826,9 +822,9 @@ public class JsonIo {
      * This method is identical to {@link #toMaps(String)} but allows you to specify additional
      * read options for controlling the parsing behavior (e.g., custom type aliases, missing field handlers).
      * <p>
-     * The method automatically configures {@code returnAsJsonObjects()} mode, which sets
-     * {@code failOnUnknownType(false)} by default. If you explicitly set {@code failOnUnknownType(true)}
-     * in your options, that will be honored.
+     * The method reads in {@code returnAsJsonObjects()} mode, which allows unknown types. To refuse them, pass
+     * options built with {@code returnAsJsonObjects().failOnUnknownType(true)}: {@code failOnUnknownType(true)} on
+     * options built for Java mode is that mode's default, so it is not carried into Map mode.
      *
      * <h3>Example:</h3>
      * <pre>{@code

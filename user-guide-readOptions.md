@@ -84,8 +84,10 @@ keys and values. A common choice is `LinkedHashMap` to maintain insertion order.
    If`fail`is`false,`then the default class used will be`JsonObject` for the particular JSON object encountered. You can
    set this to your own class using the`unknownTypeClass()`feature (e.g., `LinkedHashMap.class`). The default setting is `true.`
 
->**Note:** When using `JsonIo.toMaps()`, this option is automatically set to `false` since Map mode is designed to work
-   without requiring classes on the classpath. You can override this by explicitly setting `failOnUnknownType(true)` if needed.
+>**Note:** `JsonIo.toMaps()` reads with this option `false`, since Map mode is designed to work without requiring
+   classes on the classpath. To refuse unknown types in Map mode, pass options built with
+   `returnAsJsonObjects().failOnUnknownType(true)`: `failOnUnknownType(true)` on options built for Java mode is that
+   mode's default, so it is not carried into Map mode. See [Map Mode Options](/user-guide.md#map-mode-options).
 
 >#### `ReadOptionsBuilder` unknownTypeClass(`Class`)
 >- [ ] Set the class to use (defaults to`JsonObject` when `null`) when a JSON object is encountered and there is no
@@ -459,12 +461,14 @@ Aliasing simplifies JSON output by converting fully qualified Java class names i
 Example with JsonObjects mode:
 ```java
 ReadOptions options = new ReadOptionsBuilder().returnAsJsonObjects().build();
-Map<String, Object> jsonMap = JsonIo.toJava(json, options).asClass(Map.class);
+JsonObject jsonMap = JsonIo.toJava(json, options).asClass(JsonObject.class);
 // Modify the map if needed
 jsonMap.put("name", "Updated Name");
 // Later convert to Java objects if desired
 Person person = JsonIo.toJava(jsonMap, new ReadOptionsBuilder().build()).asClass(Person.class);
 ```
+`JsonIo.toMaps(json)` is the shorter way to read in this mode. What the tree holds is in the user guide's
+[What a Map Mode Tree Holds](/user-guide.md#what-a-map-mode-tree-holds).
 
 >#### `boolean` isReturningJsonObjects()
 >- [ ] Returns `true` if parser is configured to return Map of Maps (JsonObjects) instead of instantiated Java objects.
