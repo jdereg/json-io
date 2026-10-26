@@ -2,7 +2,10 @@ package com.cedarsoftware.io;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
@@ -200,5 +203,47 @@ class JsonObjectRepeatedKeyTest {
             assertEquals(c[1], JsonIo.toJson(JsonIo.fromToonToMaps(c[0], null).asClass(null), plain), c[0]);
             assertThrows(JsonIoException.class, () -> JsonIo.fromToonToMaps(c[0], strict).asClass(null), c[0]);
         }
+    }
+
+    /**
+     * Objects of 1 to 60 fields named from a pool of 80, so names repeat at every size -- below and above the size up
+     * to which the parsers find a repeat by a scan, and past 64, where every hash bit is set -- read as
+     * {@code LinkedHashMap.put} leaves them: each name once, where it first stood, holding its last value. JSON in
+     * Maps and Java mode, and non-strict TOON. Seeded, so a failure repeats.
+     */
+    @Test
+    void aRepeatedKeyAtEverySizeIsWhereItFirstStoodWithItsLastValue() {
+        Random random = new Random(4118);
+        WriteOptions plain = new WriteOptionsBuilder().showTypeInfoNever().build();
+        for (int round = 0; round < 2000; round++) {
+            int fields = 1 + random.nextInt(60);
+            Map<String, Object> expected = new LinkedHashMap<>();
+            StringBuilder json = new StringBuilder("{");
+            StringBuilder toon = new StringBuilder();
+            for (int i = 0; i < fields; i++) {
+                String name = "k" + random.nextInt(80);
+                long value = round * 100L + i;
+                expected.put(name, value);
+                json.append(i > 0 ? "," : "").append('"').append(name).append("\":").append(value);
+                toon.append(name).append(": ").append(value).append('\n');
+            }
+            json.append('}');
+            String want = JsonIo.toJson(expected, plain);
+            List<Object> keys = new ArrayList<>(expected.keySet());
+            Map<?, ?> maps = JsonIo.toMaps(json.toString(), null).asClass(Map.class);
+            assertEquals(keys, new ArrayList<>(maps.keySet()), json.toString());
+            assertEquals(want, JsonIo.toJson(maps, plain), json.toString());
+            assertEquals(want, JsonIo.toJson(JsonIo.toJava(json.toString(), null).asClass(Map.class), plain));
+            assertEquals(want, JsonIo.toJson(JsonIo.fromToonToMaps(toon.toString(), null).asClass(Map.class), plain),
+                    toon.toString());
+        }
+        // a name too long for the tokenizer's string cache: each occurrence is its own String
+        String name = "a_field_name_long_enough_that_the_tokenizer_does_not_cache_it_0123456789";
+        Map<?, ?> read = JsonIo.toMaps("{\"" + name + "\":1,\"b\":2,\"" + name + "\":3}", null).asClass(Map.class);
+        assertEquals(Arrays.asList(name, "b"), new ArrayList<>(read.keySet()));
+        assertEquals(3L, read.get(name));
+        read = JsonIo.fromToonToMaps(name + ": 1\nb: 2\n" + name + ": 3\n", null).asClass(Map.class);
+        assertEquals(Arrays.asList(name, "b"), new ArrayList<>(read.keySet()));
+        assertEquals(3L, read.get(name));
     }
 }

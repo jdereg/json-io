@@ -1407,7 +1407,7 @@ public class ToonReader {
         if (!strictToon) {
             long bit = 1L << key.hashCode();     // the shift takes the low six bits
             if ((keyBits & bit) != 0) {
-                int at = target.indexOf(key);
+                int at = target.indexOfAppended(key);
                 if (at >= 0) {
                     target.fastSetValueAt(at, value);
                     return;

@@ -384,7 +384,7 @@ class JsonParser {
     private long appendField(JsonObject jObj, String field, Object value, long keyBits) {
         long bit = 1L << field.hashCode();      // the shift takes the low six bits
         if ((keyBits & bit) != 0) {
-            int at = jObj.indexOf(field);       // the fields the parser appends, whatever the object's shape
+            int at = jObj.indexOfAppended(field);   // the fields the parser appends, whatever the object's shape
             if (at >= 0) {
                 if (strictJson) {
                     error("Duplicate key '" + field + "' not allowed in strict JSON mode");

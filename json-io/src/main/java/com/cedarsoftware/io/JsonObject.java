@@ -86,6 +86,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // Threshold for switching from linear search to the hash index.
     // Lower values reduce O(n²) cost of building objects with many fields.
     private static volatile int INDEX_THRESHOLD = 4;
+    // Up to this many fields the parsers look a key they appended up by a scan (indexOfAppended), building no index.
+    static final int APPENDED_SCAN_LIMIT = 32;
 
     // Parallel arrays for POJO field entries and Map operations.
     // keys[] holds field names (POJOs, String-keyed maps) or complex keys (via setKeys).
@@ -727,6 +729,24 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     // ========== Index Management ==========
+
+    /**
+     * Where a parser appended {@code key} already, or -1: a scan from the last key while the object is small and has no
+     * index, else {@link #indexOf}. The parsers ask only when the key's hash bit is set already, which two different
+     * keys often share; an index built for each object of about twenty fields made a string-heavy read 6% slower.
+     */
+    int indexOfAppended(Object key) {
+        if (size > APPENDED_SCAN_LIMIT || index != null) {
+            return indexOf(key);
+        }
+        for (int i = size - 1; i >= 0; i--) {
+            Object k = keys[i];
+            if (k == key || key.equals(k)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     int indexOf(Object key) {
         // Lite JsonObject only ever holds POJO field entries via keys[]/data[].
