@@ -430,6 +430,10 @@ When `strictJson()` is enabled, the following will cause parse errors:
 - Non-standard number formats (.5, -.5, 5., 1.e5, +5, and leading zeros such as 01 or 00.5)
 - Infinity and NaN literals
 - Unescaped control characters (U+0000 through U+001F, such as a raw tab or line feed) inside a string, and the `\'` escape
+- A key repeated within one object (RFC 8259: the names within an object SHOULD be unique)
+
+Without `strictJson()`, a key repeated within an object is read once: its last value, where the key first stood -- as
+JavaScript's `JSON.parse` and `LinkedHashMap.put` leave it. Written back, it appears once.
 
 For TOON parsing strictness, use `strictToon()` on `ReadOptionsBuilder`:
 

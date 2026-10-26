@@ -73,9 +73,12 @@ public class ToonReader {
         private final int leafCount;                // cells per row under fieldTree
         private final int valueStart;               // index in the line buffer just after the header's colon
         private final boolean keyed;                // [N:]: an object whose entries are rows that carry their keys
+        private final boolean repeatsName;          // a level of the field list names a field twice (non-strict)
 
-        private ArrayHeader(int count, char delimiter, FieldEntry[] fields, int valueStart, boolean keyed) {
+        private ArrayHeader(int count, char delimiter, FieldEntry[] fields, int valueStart, boolean keyed,
+                            boolean repeatsName) {
             this.count = count;
+            this.repeatsName = repeatsName;
             this.delimiter = delimiter;
             this.valueStart = valueStart;
             this.keyed = keyed;
@@ -166,6 +169,13 @@ public class ToonReader {
     private final int indentSize;
     private final int maxDepth;
     private final ClassLoader classLoader;
+    // The object being read field by field: a bit per field name's hash, a repeated key setting one already set (see
+    // appendField). Saved and restored by each reader of an object, so a nested object's names stay out of it.
+    private long keyBits;
+    // The rows being read repeat a name of their header (non-strict mode): each cell's key is looked up (appendCell)
+    private boolean rowsRepeatNames;
+    // Set by parseFieldList: the field list just read repeats a name within one of its levels
+    private boolean fieldListRepeats;
 
     // Line management - supports peek/consume pattern
     private boolean currentHasLine = false;
@@ -397,6 +407,8 @@ public class ToonReader {
         // (→ lite shape).
         JsonObject jsonObj = null;
         PendingMeta pending = new PendingMeta();
+        long outerBits = keyBits;
+        keyBits = 0;
 
         while (true) {
             if (!hasLine()) {
@@ -439,7 +451,7 @@ public class ToonReader {
             jsonObj = new JsonObject();
             applyPendingMetadata(jsonObj, suggestedType, pending);
         }
-
+        keyBits = outerBits;
         return jsonObj;
     }
 
@@ -836,6 +848,7 @@ public class ToonReader {
         // directly by the colon. A space there ("items[2] :", "a[1]{x} :") is a header syntax error.
         int pos = bracketEnd + 1;
         FieldEntry[] fields = null;
+        fieldListRepeats = false;
         if (pos < end && buf[pos] == '{') {
             fields = parseFieldList(buf, pos, end, delimiter, 1);
             if (fields == null) {
@@ -853,7 +866,7 @@ public class ToonReader {
                     + (fields == null ? "bracket" : "fields") + " segment) at line " + lineNumber + ": "
                     + new String(buf, bracket, end - bracket));
         }
-        return new ArrayHeader(count, delimiter, fields, pos + 1, keyed);
+        return new ArrayHeader(count, delimiter, fields, pos + 1, keyed, fieldListRepeats);
     }
 
     /**
@@ -974,6 +987,14 @@ public class ToonReader {
                 throw new JsonIoException("Duplicate field name '" + entry.name + "' in array header at line "
                         + lineNumber);
             }
+            if (names == null && !fieldListRepeats) {
+                for (FieldEntry other : entries) {
+                    if (other.name.equals(entry.name)) {
+                        fieldListRepeats = true;    // the rows look their cells' keys up (appendCell)
+                        break;
+                    }
+                }
+            }
             entries.add(entry);
             i++;
             if (last) {
@@ -1028,6 +1049,10 @@ public class ToonReader {
         int entryCount = 0;
         int entryDepth = -1;
         final String outerSpan = openSpan;
+        final long outerBits = keyBits;
+        final boolean outerRows = rowsRepeatNames;
+        keyBits = 0;
+        rowsRepeatNames = header.repeatsName;
 
         while (hasLine()) {
             int depth = peekIndent();
@@ -1082,11 +1107,13 @@ public class ToonReader {
             if (strictToon && entries.containsKey(key)) {
                 throw new JsonIoException("Duplicate key '" + key + "' at line " + lineNumber);
             }
-            entries.appendFieldForParser(key, entry);
+            appendField(entries, key, entry);
             entryCount++;
         }
 
         openSpan = outerSpan;
+        keyBits = outerBits;
+        rowsRepeatNames = outerRows;
         if (strictToon && entryCount != header.count) {
             throw new JsonIoException("Keyed object count mismatch at line " + lineNumber +
                     ", expected " + header.count + " entries, got " + entryCount);
@@ -1108,6 +1135,8 @@ public class ToonReader {
         String[] columnMetaKeys = fieldTree == null ? buildColumnMetaKeys(columnHeaders) : null;
         Object[] cells = fieldTree == null ? null : new Object[colHeadersSize];
         final String outerSpan = openSpan;
+        final boolean outerRows = rowsRepeatNames;
+        rowsRepeatNames = header.repeatsName;
 
         // Spec 9.3, 14.1, 14.4: the table is the row lines of the header's scope -- the lines one level below
         // the header, down to the first line that is no row. The declared count neither ends the scope nor
@@ -1169,6 +1198,7 @@ public class ToonReader {
                     ", expected " + count + " rows, got " + elements.size());
         }
 
+        rowsRepeatNames = outerRows;
         return elements;
     }
 
@@ -1334,11 +1364,11 @@ public class ToonReader {
         JsonObject obj = new JsonObject(fields.length);
         for (FieldEntry field : fields) {
             if (field.group != null) {
-                obj.appendFieldForParser(field.name, buildRow(field.group, cells));
+                appendCell(obj, field.name, buildRow(field.group, cells));
             } else if (field.metaKey != null) {
                 loadMetaField(obj, field.metaKey, cells[rowCellCursor++]);
             } else {
-                obj.appendFieldForParser(field.name, cells[rowCellCursor++]);
+                appendCell(obj, field.name, cells[rowCellCursor++]);
             }
         }
         return obj;
@@ -1350,7 +1380,37 @@ public class ToonReader {
         if (metaKey != null) {
             loadMetaField(target, metaKey, value);
         } else {
-            target.appendFieldForParser(columnHeaders.get(colIndex), value);
+            appendCell(target, columnHeaders.get(colIndex), value);
+        }
+    }
+
+    /**
+     * A field of the object being read. In non-strict mode a key repeated is its last value, where the key first stood
+     * (§14.4: last write wins) -- looked up only where its name's hash bit is already set ({@link #keyBits}); it was
+     * held twice, the object's size, its keys and a rewrite counting both. Strict mode has refused a repeat already.
+     */
+    private void appendField(JsonObject target, String key, Object value) {
+        if (!strictToon) {
+            long bit = 1L << key.hashCode();     // the shift takes the low six bits
+            if ((keyBits & bit) != 0) {
+                int at = target.indexOf(key);
+                if (at >= 0) {
+                    target.fastSetValueAt(at, value);
+                    return;
+                }
+            }
+            keyBits |= bit;
+        }
+        target.appendFieldForParser(key, value);
+    }
+
+    /** A cell of a row: its key looked up only when the row's header repeats a name (non-strict, last one wins). */
+    private void appendCell(JsonObject row, String key, Object value) {
+        int at = rowsRepeatNames ? row.indexOf(key) : -1;
+        if (at >= 0) {
+            row.fastSetValueAt(at, value);
+        } else {
+            row.appendFieldForParser(key, value);
         }
     }
 
@@ -1471,6 +1531,8 @@ public class ToonReader {
         // determined.
         JsonObject jsonObj = null;
         PendingMeta pending = new PendingMeta();
+        long outerBits = keyBits;
+        keyBits = 0;
 
         // Parse first field directly from lineBuf[firstFieldStart..firstFieldEnd).
         // Safe to use lineBuf here because the hyphen-line contents persist in the
@@ -1533,7 +1595,7 @@ public class ToonReader {
             jsonObj = new JsonObject();
             applyPendingMetadata(jsonObj, null, pending);
         }
-
+        keyBits = outerBits;
         return jsonObj;
     }
 
@@ -2686,8 +2748,7 @@ public class ToonReader {
         }
         if (strictToon) {
             // §8 / §14.4: duplicate sibling keys at the same depth MUST error in strict
-            // mode. Non-strict mode applies last-write-wins silently (appendFieldForParser
-            // below appends the key again, and every JsonObject lookup reads its last value). For target.get to distinguish
+            // mode. Non-strict mode applies last-write-wins (appendField below). For target.get to distinguish
             // "key is present with null value" from "key is absent", use containsKey.
             if (target.containsKey(key)) {
                 Object existing = target.get(key);
@@ -2699,7 +2760,7 @@ public class ToonReader {
                 throw new JsonIoException("Duplicate key '" + key + "' at line " + lineNumber);
             }
         }
-        target.appendFieldForParser(key, value);
+        appendField(target, key, value);
         return target;
     }
 

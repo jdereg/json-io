@@ -423,8 +423,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      * Parser-only fast append path.
      * <p>
      * JSON object keys are overwhelmingly unique in practice, so this method skips duplicate-key
-     * search and appends directly to avoid per-field {@code indexOf()} churn during parse. A repeated key is
-     * appended again; lookups then find its last value (see {@link #indexOf}).
+     * search and appends directly to avoid per-field {@code indexOf()} churn during parse. The parsers look a field
+     * up first only where its name's hash bit is already set, and replace a repeated key's value; given one here, a
+     * repeated key is appended again, and lookups find its last value (see {@link #indexOf}).
      * The hash index is built lazily on first lookup via {@code indexOf()} -- but once a lookup has built it
      * (strict TOON checks each key for a duplicate before appending it), every appended key must go into it,
      * or get() and containsKey() miss the fields that follow while keySet() still lists them.
@@ -438,35 +439,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         }
         size++;
         hash = null;
-    }
-
-    /**
-     * A key the document repeated, once: its last value, where the key first stood -- as {@code LinkedHashMap.put}
-     * leaves it. The parser appends a repeated key again ({@link #appendFieldForParser}); this map then held it twice,
-     * its size and keys counting both. Nothing is allocated when no key repeats.
-     */
-    void collapseRepeatedKeys() {
-        boolean repeated = false;
-        for (int i = 0; i < size && !repeated; i++) {
-            repeated = indexOf(keys[i]) != i;   // a lookup finds a key's last position
-        }
-        if (!repeated) {
-            return;
-        }
-        Map<Object, Object> entries = new LinkedHashMap<>(size * 2);
-        for (int i = 0; i < size; i++) {
-            entries.put(keys[i], data[i]);
-        }
-        Arrays.fill(keys, 0, size, null);
-        Arrays.fill(data, 0, size, null);
-        size = 0;
-        index = null;
-        hash = null;
-        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
-            keys[size] = entry.getKey();
-            data[size] = entry.getValue();
-            size++;
-        }
     }
 
     @Override
@@ -548,7 +520,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     // ========== Index Management ==========
 
-    private int indexOf(Object key) {
+    int indexOf(Object key) {
         // Lite JsonObject only ever holds POJO field entries via keys[]/data[].
         if (size == 0) return -1;
 

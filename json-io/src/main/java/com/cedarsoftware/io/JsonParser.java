@@ -80,6 +80,7 @@ class JsonParser {
     private final long maxIdValue;
     private final ClassLoader classLoader;
     private final Map<String, String> substitutes;
+    private final boolean strictJson;
 
     private static final Map<String, String> SUBSTITUTES = new HashMap<>(16);
 
@@ -120,6 +121,7 @@ class JsonParser {
         this.maxParseDepth = readOptions.getMaxDepth();
         this.maxIdValue = readOptions.getMaxIdValue();
         this.classLoader = readOptions.getClassLoader();
+        this.strictJson = readOptions.isStrictJson();
 
         this.tokenizer = new CharStreamTokenizer(
                 reader,
@@ -223,6 +225,7 @@ class JsonParser {
         long pendingRefId = 0;
         Class<?> pendingType = null;
         String pendingTypeString = null;
+        long keyBits = 0;       // a bit per field name's hash: a key repeated sets one already set (see appendField)
 
         ++curParseDepth;
 
@@ -275,7 +278,7 @@ class JsonParser {
                     // Non-metadata field → lite shape
                     jObj = new JsonObject();
                     applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
-                    jObj.appendFieldForParser(field, value);
+                    keyBits = appendField(jObj, field, value, keyBits);
                     preAlloc = false;
                 } else if (StringUtilities.equals(field, ITEMS)) {
                     if (value != null && !value.getClass().isArray()) {
@@ -307,7 +310,7 @@ class JsonParser {
                     // Unknown @-prefixed field → treat as lite, preserve the field
                     jObj = new JsonObject();
                     applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
-                    jObj.appendFieldForParser(field, value);
+                    keyBits = appendField(jObj, field, value, keyBits);
                     preAlloc = false;
                 }
             } else {
@@ -316,7 +319,7 @@ class JsonParser {
                 // Fast path for regular fields (95%+ of fields don't start with '@')
                 // Note: length check MUST come first for short-circuit evaluation (empty field names are valid JSON)
                 if (field.length() == 0 || field.charAt(0) != '@') {
-                    jObj.appendFieldForParser(field, value);
+                    keyBits = appendField(jObj, field, value, keyBits);
                 } else {
                     // Process special meta fields (@type, @id, @ref, etc.)
                     if (StringUtilities.equals(field, TYPE)) {
@@ -345,7 +348,7 @@ class JsonParser {
                         jObj = JsonObject.promoteToArray(jObj, references);
                         loadEnum(value, jObj);
                     } else {
-                        jObj.appendFieldForParser(field, value); // Store unrecognized @-prefixed fields
+                        keyBits = appendField(jObj, field, value, keyBits); // Store unrecognized @-prefixed fields
                     }
                 }
             }
@@ -360,6 +363,28 @@ class JsonParser {
 
         --curParseDepth;
         return jObj;
+    }
+
+    /**
+     * Appends a field to the object being read, its name's hash bit added to {@code keyBits}. A key the object holds
+     * already -- looked up only where its bit is set -- is the last value, where the key first stood, as
+     * {@code LinkedHashMap.put} and JavaScript's {@code JSON.parse} leave it; it was held twice (the map's size, its keys
+     * and a rewrite counting both). In strict JSON (RFC 8259: names SHOULD be unique) a repeated key is an error.
+     */
+    private long appendField(JsonObject jObj, String field, Object value, long keyBits) {
+        long bit = 1L << field.hashCode();      // the shift takes the low six bits
+        if ((keyBits & bit) != 0) {
+            int at = jObj.indexOf(field);       // the fields the parser appends, whatever the object's shape
+            if (at >= 0) {
+                if (strictJson) {
+                    error("Duplicate key '" + field + "' not allowed in strict JSON mode");
+                }
+                jObj.fastSetValueAt(at, value);
+                return keyBits;
+            }
+        }
+        jObj.appendFieldForParser(field, value);
+        return keyBits | bit;
     }
 
     /**

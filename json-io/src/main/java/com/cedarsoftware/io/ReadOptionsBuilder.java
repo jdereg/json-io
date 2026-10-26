@@ -1647,6 +1647,8 @@ public class ReadOptionsBuilder {
      *   <li>Positive sign on numbers</li>
      *   <li>Multi-line strings</li>
      *   <li>Unescaped control characters (U+0000 through U+001F) in a string, and the {@code \'} escape</li>
+     *   <li>A key repeated within one object (in permissive mode it is read once: its last value, where the key first
+     *   stood)</li>
      * </ul>
      * Default is permissive mode (JSON5 features accepted).
      * @return ReadOptionsBuilder for chained access.

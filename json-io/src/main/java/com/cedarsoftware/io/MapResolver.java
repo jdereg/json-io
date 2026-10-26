@@ -444,7 +444,6 @@ public class MapResolver extends Resolver {
             // keep in step. A concrete Map class (LinkedHashMap, TreeMap) is a copy into it, as before.
             // JsonObject asked for: the root, whatever it holds (a typed collection too: it was a mismatch)
             if (rootType == JsonObject.class || isMapItself(rootType) && result instanceof Map && rootObj.isMapShaped()) {
-                rootObj.collapseRepeatedKeys();     // as the copy did: a key the document repeats, once
                 return rootObj;
             }
             return result;
