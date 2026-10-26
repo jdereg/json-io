@@ -89,6 +89,11 @@ public class MapResolver extends Resolver {
             return convertToType(from, type);
         }
         Type shape = jsonShape(type);
+        if (holdsItemsOfAnotherClass(value, shape)) {
+            // A class not on the classpath, holding @items, asked for as a Collection: its items (a List of them)
+            super.toJava(null, value);
+            return convertToType(((JsonObject) value).getItems(), shape);
+        }
         if (isPlainObjectReadAsItems(value, shape)) {
             throw new JsonIoException("Return type mismatch. Expecting: " + TypeUtilities.getRawClass(shape).getName()
                     + ", found: " + JsonObject.class.getName());
@@ -167,6 +172,21 @@ public class MapResolver extends Resolver {
             }
         }
         return true;
+    }
+
+    /**
+     * A JSON object holding @items whose class -- one not on the classpath, read as a map in its place -- is neither an
+     * array nor a collection, asked for as a Collection. It was a "Return type mismatch .. found LinkedHashMap", while
+     * asked for as an array it gave its items.
+     */
+    private static boolean holdsItemsOfAnotherClass(Object value, Type shape) {
+        if (!(value instanceof JsonObject) || ((JsonObject) value).getItems() == null || ((JsonObject) value).getKeys() != null) {
+            return false;
+        }
+        Class<?> own = ((JsonObject) value).getRawType();
+        Class<?> asked = TypeUtilities.getRawClass(shape);
+        return asked != null && Collection.class.isAssignableFrom(asked)
+                && (own == null || !own.isArray() && !Collection.class.isAssignableFrom(own));
     }
 
     /**

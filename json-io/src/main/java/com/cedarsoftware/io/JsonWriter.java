@@ -1465,10 +1465,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                             writeJsonObjectArray(jObj, showType);
                             break;
                         case COLLECTION:
-                            writeJsonObjectCollection(jObj, showType);
+                            writeJsonObjectCollection(jObj, showType, jObj.getRawType().getName());
                             break;
                         case MAP:
-                            if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
+                            if (holdsItemsOfAnotherClass(jObj)) {
+                                writeJsonObjectCollection(jObj, showType, getTypeNameForOutput(jObj));
+                            } else if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
                                 writeJsonObjectMap(jObj, showType);
                             }
                             break;
@@ -2074,11 +2076,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * (no trailing {@code "@items":[]}); empty unwrapped emits {@code &#123;&#125;}
      * (because the legacy code unconditionally wraps when {@code len == 0}, preserved here).
      */
-    private void writeJsonObjectCollection(JsonObject jObj, boolean showType) throws IOException {
+    /**
+     * A JsonObject holding @items whose class -- one not on the classpath, read as a map in its place, an EnumSet of such
+     * an enum -- is a map's: a collection still, under the @type the JSON gave it. Written as a map's fields, it had
+     * none, and its items were lost on a Maps-mode rewrite (every release).
+     */
+    private static boolean holdsItemsOfAnotherClass(JsonObject jObj) {
+        return jObj.getItems() != null && jObj.getKeys() == null;
+    }
+
+    private void writeJsonObjectCollection(JsonObject jObj, boolean showType, String typeName) throws IOException {
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
-        Class<?> colClass = jObj.getRawType();
+        showType = showType && typeName != null;
         final boolean referenced = adjustIfReferenced(jObj);
         Object[] items = jObj.getItems();
         final int len = items != null ? items.length : 0;
@@ -2095,7 +2106,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 gen.writeNumberField(idKey, (int) jObj.getId());
             }
             if (showType) {
-                String alias = writeOptions.getTypeNameAlias(colClass.getName());
+                String alias = writeOptions.getTypeNameAlias(typeName);
                 gen.writeStringFieldUnescaped(typeKey, alias);
             }
         }
