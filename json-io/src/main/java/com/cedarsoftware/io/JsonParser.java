@@ -13,6 +13,7 @@ import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.TypeUtilities;
+import com.cedarsoftware.util.convert.Converter;
 
 import static com.cedarsoftware.io.JsonObject.ENUM;
 import static com.cedarsoftware.io.JsonObject.ID;
@@ -75,6 +76,7 @@ class JsonParser {
     private final Resolver resolver;
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
+    private final Converter converter;       // the read's, on each object made (JsonObject.get(key, type))
     private int curParseDepth = 0;
     private final int maxParseDepth;
     private final long maxIdValue;
@@ -118,6 +120,7 @@ class JsonParser {
         this.resolver = resolver;
         this.readOptions = resolver.getReadOptions();
         this.references = resolver.getReferences();
+        this.converter = resolver.getConverter();
         this.maxParseDepth = readOptions.getMaxDepth();
         this.maxIdValue = readOptions.getMaxIdValue();
         this.classLoader = readOptions.getClassLoader();
@@ -397,6 +400,7 @@ class JsonParser {
     private void applyPendingMetadata(JsonObject jObj, Type suggestedType,
                                       Class<?> pendingType, String pendingTypeString,
                                       Long pendingId, long pendingRefId) {
+        jObj.converter = converter;
         // Set the refined type on the JsonObject.
         // Performance: Skip type resolution for null or simple Class types (most common case).
         // Only ParameterizedType and other complex types need resolution against themselves.

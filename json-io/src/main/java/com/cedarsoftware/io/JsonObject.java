@@ -100,11 +100,14 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // boxed Integer: past the threshold, an object that was looked up paid for its arrays AND a HashMap.
     private transient int[] index;
 
-    // Cached values — package-private so subclasses can invalidate after their own mutations. The hash is cached only
-    // by an object holding @items (JsonObjectArray): a map's hash is deep, so a nested change changes it.
-    Integer hash;
     private String typeString;
+    // Cached value — package-private so subclasses can invalidate it after their own mutations.
     byte jsonTypeCache;
+
+    // The Converter of the read that made this object, which get(key, type) and putAsJson use: its ReadOptions'
+    // conversions, zone and locale. Null on one made by hand, which uses the default ReadOptions' Converter. A field
+    // more would make a JsonObject 72 bytes, where it is 64 (JDK 17+).
+    transient Converter converter;
 
     // Set on every object a Maps-mode read gives (MapResolver): such a tree, or a part of it, is read by
     // JsonIo.toJava(JsonObject, ..) as Java mode reads its text -- its objects carry that read's state (a type of Object,
@@ -222,6 +225,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         if (src.isReference()) {
             setReferenceId(src.getReferenceId());
         }
+        converter = src.converter;
     }
 
     // ========== Type Classification ==========
@@ -397,17 +401,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     /**
-     * The value for the key as the given class, converted by the Converter json-io's default ReadOptions use: the
-     * same as {@code converter.convert(get(key), type)}, so it replaces a cast ({@code (Integer) map.get("qty")},
-     * which fails on the Long a Maps-mode read gives) or such a call. A value that is already of the class is
-     * returned as it is (a nested JsonObject asked for as a JsonObject). An absent key or a null value converts as
-     * null does: 0 for a primitive class, null for most others.
+     * The value for the key as the given class, converted by the Converter of the read that gave this object -- the
+     * conversions added to its ReadOptions, its zone and locale apply -- or, on one made by hand, by the default
+     * ReadOptions' Converter: the same as {@code converter.convert(get(key), type)}, so it replaces a cast
+     * ({@code (Integer) map.get("qty")}, which fails on the Long a Maps-mode read gives) or such a call. A value that
+     * is already of the class is returned as it is (a nested JsonObject asked for as a JsonObject). An absent key or a
+     * null value converts as null does: 0 for a primitive class, null for most others.
      * <pre>{@code
      * JsonObject order = JsonIo.toMaps(json, null).asClass(JsonObject.class);
      * int qty = order.get("qty", int.class);                          // a Long 3 in the tree
      * LocalDate shipped = order.get("shipped", LocalDate.class);      // "2026-01-15"
      * }</pre>
-     * Conversions registered on the ReadOptions of the read are not consulted here.
      *
      * @param key  the key
      * @param type the class to return the value as
@@ -443,8 +447,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     }
 
     /**
-     * The value for the key as the given type, which may be generic, converted by the Converter json-io's default
-     * ReadOptions use: a JSON array of text as a {@code List<LocalDate>}, a nested object as a
+     * The value for the key as the given type, which may be generic, converted by the Converter
+     * {@link #get(Object, Class)} uses: a JSON array of text as a {@code List<LocalDate>}, a nested object as a
      * {@code Map<String, Integer>}, each element, key and value converted. The same as
      * {@code converter.convert(get(key), type.getType())}; an absent key or a null value converts as null does.
      * <pre>{@code
@@ -487,7 +491,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
      *     <li><b>A number</b> is a Long or a Double when one holds it exactly ({@code 5} for an Integer, {@code 1.1}
      *     for a Float 1.1f or a BigDecimal 1.10), else a BigInteger or a BigDecimal.</li>
      *     <li><b>A value the Converter writes as text</b> is that text: a date or time ({@code "2026-01-15"}), a UUID,
-     *     an enum's name, a Character, a Locale, a URI, a Class name ...</li>
+     *     an enum's name, a Character, a Locale, a URI, a Class name ... The Converter is the one
+     *     {@link #get(Object, Class)} uses.</li>
      *     <li><b>A Map</b> is a JsonObject, its keys text; <b>a Collection or an array</b> an Object[] (a char[] is its
      *     text); <b>an Optional</b> its content or null. What they hold is put the same way.</li>
      *     <li><b>Any other object</b> is a JsonObject of its fields, as the Converter turns an object into a Map.</li>
@@ -507,19 +512,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return put(key, jsonForm(value, null));
     }
 
-    /** The Converter json-io's default ReadOptions use, as a read with them does. */
-    private static Converter converter() {
-        ReadOptions options = ReadOptionsBuilder.getDefaultReadOptions();
-        return options instanceof ReadOptionsBuilder.DefaultReadOptions
-                ? ((ReadOptionsBuilder.DefaultReadOptions) options).converter()
-                : new Converter(options.getConverterOptions());
+    /** The Converter of the read that made this object, else the one json-io's default ReadOptions use. */
+    private Converter converter() {
+        Converter c = converter;
+        return c != null ? c : ReadOptionsBuilder.converterOf(ReadOptionsBuilder.getDefaultReadOptions());
     }
 
     /**
      * The value as plain JSON holds it (see {@link #putAsJson}). {@code holding} is the containers being converted,
      * made on the first: one met again holds itself.
      */
-    private static Object jsonForm(Object value, IdentityHashMap<Object, Object> holding) {
+    private Object jsonForm(Object value, IdentityHashMap<Object, Object> holding) {
         if (value == null || value instanceof String || value instanceof Boolean || value instanceof Long
                 || value instanceof Double || value instanceof JsonObject) {
             return value;
@@ -546,7 +549,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         boolean map = value instanceof Map;
         if (!map && !(value instanceof Collection) && !value.getClass().isArray()) {
             Converter converter = converter();
-            if (converter.isSimpleTypeConversionSupported(value.getClass(), String.class)) {
+            // (not isSimpleTypeConversionSupported: that is false where the read's options override the conversion)
+            if (converter.isConversionSupportedFor(value.getClass(), String.class)) {
                 return converter.convert(value, String.class);
             }
             return jsonForm(converter.convert(value, Map.class), holding);     // its fields
@@ -561,6 +565,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         Object json;
         if (map) {
             JsonObject object = new JsonObject();
+            object.converter = converter;
             for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
                 Object name = entry.getKey() instanceof String ? entry.getKey() : jsonForm(entry.getKey(), holding);
                 if (name instanceof JsonObject || name instanceof Object[]) {
@@ -585,8 +590,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
     @Override
     public Object put(Object key, Object value) {
-        hash = null;
-
         int idx = indexOf(key);
         if (idx >= 0) {
             Object old = data[idx];
@@ -630,7 +633,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             indexKey(key, size);
         }
         size++;
-        hash = null;
     }
 
     @Override
@@ -665,7 +667,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             size--;
             keys[size] = null;
             data[size] = null;
-            hash = null;
             index = null;
             idx = indexOf(key);
         } while (idx >= 0);
@@ -676,7 +677,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     @Override
     public void putAll(Map<?, ?> map) {
         if (map == null || map.isEmpty()) return;
-        hash = null;
         ensureCapacity(size + map.size());
         for (Entry<?, ?> entry : map.entrySet()) {
             put(entry.getKey(), entry.getValue());
@@ -691,7 +691,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         size = 0;
         itemElementType = null;
         mapKeyType = null;
-        hash = null;
         index = null;
         jsonTypeCache = 0;
     }
@@ -832,7 +831,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     /** Replaces the value at {@code index}, as {@code setValue()} on that field's entry would, allocating nothing. */
     void fastSetValueAt(int index, Object value) {
         data[index] = value;
-        hash = null;
     }
 
     private class KeySet extends AbstractSet<Object> {
@@ -1430,7 +1428,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
 
         if (len == 0) return;
 
-        hash = null;
         Map<Object, Object> targetMap = (Map<Object, Object>) target;
 
         for (int i = 0; i < len; i++) {

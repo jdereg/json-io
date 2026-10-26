@@ -65,7 +65,6 @@ class JsonObjectMap extends JsonObject {
         }
         this.keysRef = keyArray;
         // Invalidate cached state on parent (package-private access).
-        this.hash = null;
         this.jsonTypeCache = 0;
     }
 
@@ -80,7 +79,6 @@ class JsonObjectMap extends JsonObject {
             throw new JsonIoException("Argument array cannot be null");
         }
         this.valuesRef = array;
-        this.hash = null;
         this.jsonTypeCache = 0;
     }
 
@@ -246,7 +244,6 @@ class JsonObjectMap extends JsonObject {
     @Override
     void fastSetValueAt(int index, Object value) {
         valuesRef[index] = value;
-        hash = null;
     }
 
     private final class MapKeySet extends AbstractSet<Object> {
@@ -404,7 +401,6 @@ class JsonObjectMap extends JsonObject {
             return;
         }
 
-        hash = null;
         Map<Object, Object> targetMap = (Map<Object, Object>) target;
 
         for (int i = 0; i < len; i++) {

@@ -52,7 +52,6 @@ class JsonObjectArray extends JsonObject {
         }
         this.itemsRef = array;
         // Invalidate cached state on parent (package-private access).
-        this.hash = null;
         this.jsonTypeCache = 0;
     }
 
@@ -102,11 +101,6 @@ class JsonObjectArray extends JsonObject {
 
     @Override
     public int hashCode() {
-        if (hash == null) {
-            int result = shallowMapHash();
-            result = 31 * result + itemsHash(itemsRef);
-            hash = result;
-        }
-        return hash;
+        return 31 * shallowMapHash() + itemsHash(itemsRef);
     }
 }

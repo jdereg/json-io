@@ -210,6 +210,12 @@ public class ReadOptionsBuilder {
         return DEFAULT_READ_OPTIONS.get();
     }
 
+    /** The Converter a read with these options uses: theirs, made once, or a new one for options of another class. */
+    static Converter converterOf(ReadOptions options) {
+        return options instanceof DefaultReadOptions ? ((DefaultReadOptions) options).converter()
+                : new Converter(options.getConverterOptions());
+    }
+
     /** How many permanent settings have been made: options cached for callers that pass none follow it. */
     static int permanentVersion() {
         return PERMANENT_VERSION.get();

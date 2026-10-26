@@ -387,9 +387,7 @@ public class JsonIo {
      */
     private static Resolver createResolver(ReadOptions readOptions) {
         ReferenceTracker references = new Resolver.DefaultReferenceTracker(readOptions);
-        Converter converter = readOptions instanceof ReadOptionsBuilder.DefaultReadOptions ?
-                ((ReadOptionsBuilder.DefaultReadOptions) readOptions).converter() :
-                new Converter(readOptions.getConverterOptions());
+        Converter converter = ReadOptionsBuilder.converterOf(readOptions);
         return readOptions.isReturningJsonObjects() ?
                 new MapResolver(readOptions, references, converter) :
                 new ObjectResolver(readOptions, references, converter);
@@ -1879,7 +1877,8 @@ public class JsonIo {
                         readOptions,
                         typeHolder.getType(),
                         (resolver, readType) -> {
-                            ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
+                            ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences(),
+                                    resolver.getConverter());
                             Object parsed = parser.readValue(readType);
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
                             resolver.setToonNumbers(true);
@@ -1940,7 +1939,8 @@ public class JsonIo {
                         readOptions,
                         typeHolder.getType(),
                         (resolver, readType) -> {
-                            ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences());
+                            ToonReader parser = new ToonReader(input, readOptions, resolver.getReferences(),
+                                    resolver.getConverter());
                             Object parsed = parser.readValue(readType);
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
                             resolver.setToonNumbers(true);

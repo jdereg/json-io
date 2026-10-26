@@ -171,18 +171,20 @@ order.putAsJson("qty", 4);                                // "qty":4
 order.putAsJson("when", ZonedDateTime.now());             // text, no @type
 String updated = JsonIo.toJson(order, writeOptions);
 ```
-- **`get(key, type)`** is `Converter.convert(get(key), type)`, using the Converter of json-io's default `ReadOptions`.
-  It drops in for that call and for a cast. A value that is already of the class is returned as is, for example a
+- **`get(key, type)`** is `Converter.convert(get(key), type)`, using the Converter of the read that gave the object:
+  the conversions you added to its `ReadOptions` (`addConverterOverride`), its zone and its locale apply. A
+  `JsonObject` you made yourself uses the Converter of json-io's default `ReadOptions`. It drops in for that call and
+  for a cast. A value that is already of the class is returned as is, for example a
   nested `JsonObject` asked for as a `JsonObject`. An absent key or a null value converts as null does (0 for `int`,
   null for most classes). The forms that take a default return it in that case instead. The `TypeHolder` forms convert
-  generic types element by element: `List<LocalDate>`, `Map<String, Integer>`, `Optional<UUID>`. Conversions you
-  registered on the `ReadOptions` of the read don't apply to these getters. To build a class of your own from a
-  nested object, use `JsonIo.toJava(order.get("address", JsonObject.class), readOptions).asClass(Address.class)`.
+  generic types element by element: `List<LocalDate>`, `Map<String, Integer>`, `Optional<UUID>`. To build a class of
+  your own from a nested object, use
+  `JsonIo.toJava(order.get("address", JsonObject.class), readOptions).asClass(Address.class)`.
 - **`putAsJson(key, value)`** stores what a Map mode read of plain JSON would have produced:
   - **Numbers**: a `Long` or a `Double` when either holds the value exactly (an `Integer` 5 is 5, a `Float` 1.1f is
     1.1), otherwise a `BigInteger` or `BigDecimal`.
   - **Values the Converter turns into text**: that text. This covers dates and times, UUIDs, enum names, a
-    `Character`, a `Locale`, a URI.
+    `Character`, a `Locale`, a URI. The Converter is the one the getters use.
   - **Containers**: a Map becomes a `JsonObject` with text keys, a Collection or array becomes an `Object[]`, and an
     `Optional` becomes its content or null. Their contents are converted the same way.
   - **Any other object**: a `JsonObject` of its fields.

@@ -17,6 +17,7 @@ import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.MathUtilities;
+import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.internal.VectorizedArrays;
 
 /**
@@ -163,6 +164,7 @@ public class ToonReader {
     private final FastReader reader;
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
+    private final Converter converter;       // the read's, on each object made (JsonObject.get(key, type))
     private final long maxIdValue;
     private final boolean strictToon;
     private final boolean toonExpandPaths;
@@ -242,9 +244,15 @@ public class ToonReader {
      * @param references reference tracker used during resolution (may be null)
      */
     public ToonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references) {
+        this(reader, readOptions, references, null);
+    }
+
+    /** As above, its objects converting with {@code converter} (null: the options' own). */
+    ToonReader(Reader reader, ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         this.reader = reader instanceof FastReader ? (FastReader) reader : new FastReader(reader);
         this.readOptions = readOptions == null ? ReadOptionsBuilder.getDefaultReadOptions() : readOptions;
         this.references = references;
+        this.converter = converter != null ? converter : ReadOptionsBuilder.converterOf(this.readOptions);
         this.maxIdValue = this.readOptions.getMaxIdValue();
         this.strictToon = this.readOptions.isStrictToon();
         this.toonExpandPaths = this.readOptions.isToonExpandPaths();
@@ -358,7 +366,7 @@ public class ToonReader {
     private Object readRootValueRaw(Type suggestedType) throws IOException {
         while (true) {
             if (!hasLine()) {
-                JsonObject emptyMap = new JsonObject();
+                JsonObject emptyMap = ofThisRead(new JsonObject());
                 if (suggestedType != null) {
                     emptyMap.setType(suggestedType);
                 }
@@ -448,7 +456,7 @@ public class ToonReader {
         // Metadata-only object (e.g., {"@type":"Foo","@id":1} with no shape determiner): allocate
         // lite JsonObject now and apply buffered metadata.
         if (jsonObj == null) {
-            jsonObj = new JsonObject();
+            jsonObj = ofThisRead(new JsonObject());
             applyPendingMetadata(jsonObj, suggestedType, pending);
         }
         keyBits = outerBits;
@@ -517,7 +525,7 @@ public class ToonReader {
                     // indent, or EOF) is an empty nested object — not null. Null is emitted
                     // explicitly as "key: null" per §4. Round-trips cleanly with the encoder,
                     // which emits empty Maps as bare "key:" too.
-                    fieldValue = new JsonObject();
+                    fieldValue = ofThisRead(new JsonObject());
                 }
             } else if (isEmptyArrayToken(lineBuf, valueStart, trimEnd)) {
                 fieldValue = new ArrayList<>();
@@ -550,17 +558,17 @@ public class ToonReader {
                 metaKeysSeen = true;
             }
             if (JsonValue.ITEMS.equals(meta)) {
-                jsonObj = new JsonObjectArray();
+                jsonObj = ofThisRead(new JsonObjectArray());
                 applyPendingMetadata(jsonObj, suggestedType, pending);
                 return loadItems(fieldValue, jsonObj);
             }
             if (JsonValue.KEYS.equals(meta)) {
-                jsonObj = new JsonObjectMap();
+                jsonObj = ofThisRead(new JsonObjectMap());
                 applyPendingMetadata(jsonObj, suggestedType, pending);
                 return loadKeys(fieldValue, jsonObj);
             }
             if (JsonValue.ENUM.equals(meta)) {
-                jsonObj = new JsonObjectArray();
+                jsonObj = ofThisRead(new JsonObjectArray());
                 applyPendingMetadata(jsonObj, suggestedType, pending);
                 return loadEnum(fieldValue, jsonObj);
             }
@@ -579,7 +587,7 @@ public class ToonReader {
             }
 
             // Non-metadata (or unrecognized @-prefixed) field → commit to lite shape.
-            jsonObj = new JsonObject();
+            jsonObj = ofThisRead(new JsonObject());
             applyPendingMetadata(jsonObj, suggestedType, pending);
         }
 
@@ -622,6 +630,12 @@ public class ToonReader {
      * JsonParser.applyPendingMetadata: suggestedType first, then explicit @type override, then
      * @id (with reference-tracker registration), then @ref.
      */
+    /** {@code object}, made by this read: it converts with the read's Converter (JsonObject.get(key, type)). */
+    private JsonObject ofThisRead(JsonObject object) {
+        object.converter = converter;
+        return object;
+    }
+
     private void applyPendingMetadata(JsonObject jObj, Type suggestedType, PendingMeta pending) {
         if (suggestedType != null) {
             jObj.setType(suggestedType);
@@ -1045,7 +1059,7 @@ public class ToonReader {
         final int leafCount = header.leafCount;
         final String[] columnMetaKeys = fieldTree == null ? buildColumnMetaKeys(columnHeaders) : null;
         final Object[] cells = fieldTree == null ? null : new Object[leafCount];
-        JsonObject entries = new JsonObject();
+        JsonObject entries = ofThisRead(new JsonObject());
         int entryCount = 0;
         int entryDepth = -1;
         final String outerSpan = openSpan;
@@ -1086,7 +1100,7 @@ public class ToonReader {
             JsonObject entry = null;
             if (!isTrimmedEmpty(lineBuf, valueStart, trimEnd)) {
                 if (fieldTree == null) {
-                    entry = new JsonObject(leafCount);
+                    entry = ofThisRead(new JsonObject(leafCount));
                     valuesCount = parseRowIntoObject(lineBuf, valueStart, trimEnd, columnHeaders, columnMetaKeys,
                             delimiter, entry);
                 } else {
@@ -1167,7 +1181,7 @@ public class ToonReader {
             int valuesCount;
             if (fieldTree == null) {
                 // Parse the row directly into a pre-sized object (no intermediate List)
-                rowObj = new JsonObject(colHeadersSize);
+                rowObj = ofThisRead(new JsonObject(colHeadersSize));
                 valuesCount = parseRowIntoObject(lineBuf, trimStart, trimEnd, columnHeaders, columnMetaKeys,
                         delimiter, rowObj);
             } else {
@@ -1361,7 +1375,7 @@ public class ToonReader {
      * takes the next cell, and a nested field group becomes an object built from its own fields.
      */
     private JsonObject buildRow(FieldEntry[] fields, Object[] cells) {
-        JsonObject obj = new JsonObject(fields.length);
+        JsonObject obj = ofThisRead(new JsonObject(fields.length));
         for (FieldEntry field : fields) {
             if (field.group != null) {
                 appendCell(obj, field.name, buildRow(field.group, cells));
@@ -1491,7 +1505,7 @@ public class ToonReader {
             if (elementStart >= trimEnd) {
                 // The bare marker is the empty object (spec 9.4, 10). An object's fields never stand under it:
                 // the first one stands on the hyphen line. A deeper line that follows belongs to nothing.
-                elements.add(new JsonObject());
+                elements.add(ofThisRead(new JsonObject()));
             } else if (isArrayStart(lineBuf, elementStart, trimEnd)) {
                 elements.add(readKeylessArray(elementStart, trimEnd, indent, true));
             } else if (findColonInBuf(elementStart, trimEnd) >= 0) {
@@ -1592,7 +1606,7 @@ public class ToonReader {
 
         // Metadata-only or empty inline object → allocate lite now and apply buffered metadata.
         if (jsonObj == null) {
-            jsonObj = new JsonObject();
+            jsonObj = ofThisRead(new JsonObject());
             applyPendingMetadata(jsonObj, null, pending);
         }
         keyBits = outerBits;
@@ -2917,11 +2931,11 @@ public class ToonReader {
                 if (strictToon) {
                     throw new JsonIoException("Path expansion conflict at line " + lineNumber + " for key: " + key);
                 }
-                JsonObject nested = new JsonObject();
+                JsonObject nested = ofThisRead(new JsonObject());
                 current.put(segment, nested);
                 current = nested;
             } else {
-                JsonObject nested = new JsonObject();
+                JsonObject nested = ofThisRead(new JsonObject());
                 current.put(segment, nested);
                 current = nested;
             }
