@@ -116,9 +116,10 @@ class MapsAsMapKeysTest {
     }
 
     /**
-     * An untyped key is a LinkedHashMap, as Jackson reads it, so an equal map finds its entry: as a JsonObject (shallow
-     * hash, equal only to JsonObjects) it was not found. Its untyped objects too. In JSON and TOON, in a field and at
-     * the root, written by json-io without types or by hand.
+     * An untyped key is a JsonObject, as an untyped object is anywhere in Java mode, and an equal map finds its entry:
+     * a JsonObject follows the Map contract (it was a shallow hash, equal only to JsonObjects, and the entry was not
+     * found). Its untyped objects too. In JSON and TOON, in a field and at the root, written by json-io without types
+     * or by hand.
      */
     @Test
     void untypedMapKeysAreFoundByAnEqualMap() {
@@ -129,9 +130,9 @@ class MapsAsMapKeysTest {
         assertEquals("a", back.get(map("k1")));
         assertEquals("b", back.get(nested));
         for (Object key : back.keySet()) {
-            assertSame(LinkedHashMap.class, key.getClass());
+            assertSame(JsonObject.class, key.getClass());
         }
-        assertSame(LinkedHashMap.class, ((Map<?, ?>) back.keySet().toArray()[1]).get("v").getClass());
+        assertSame(JsonObject.class, ((Map<?, ?>) back.keySet().toArray()[1]).get("v").getClass());
 
         Map<Object, String> written = new LinkedHashMap<>();
         written.put(map("k1"), "a");
@@ -165,7 +166,7 @@ class MapsAsMapKeysTest {
         }
     }
 
-    /** An object shared twice in a key (no cycle) is a map both times; a typed object in a key is that object. */
+    /** An object shared twice in a key (no cycle) is the one object both times; a typed object in a key is that object. */
     @Test
     void sharedAndTypedObjectsInAnUntypedKey() {
         String shared = "{\"@keys\":[{\"a\":{\"@id\":2,\"x\":1},\"b\":{\"@ref\":2}}],\"@items\":[\"s\"]}";
@@ -174,7 +175,9 @@ class MapsAsMapKeysTest {
         probe.put("a", inner);
         probe.put("b", inner);
         Map<?, ?> back = JsonIo.toJava(shared, null).asClass(Map.class);
-        assertSame(LinkedHashMap.class, back.keySet().iterator().next().getClass());
+        Map<?, ?> key = (Map<?, ?>) back.keySet().iterator().next();
+        assertSame(JsonObject.class, key.getClass());
+        assertSame(key.get("a"), key.get("b"));
         assertEquals("s", back.get(probe));
 
         String typed = "{\"@keys\":[{\"p\":{\"@type\":\"" + Point.class.getName() + "\",\"x\":3}}],\"@items\":[\"t\"]}";
@@ -184,7 +187,7 @@ class MapsAsMapKeysTest {
         assertEquals("t", back.get(Collections.singletonMap("p", point)));
     }
 
-    /** A key that holds itself keeps its JsonObject (a LinkedHashMap cannot hash a cycle); Maps mode keeps them all. */
+    /** A key that holds itself is a JsonObject found by itself; Maps mode keeps its keys JsonObjects too. */
     @Test
     void aCyclicKeyAndMapsModeKeepTheirObjects() {
         String cyclic = "{\"@keys\":[{\"@id\":1,\"self\":{\"@ref\":1}}],\"@items\":[\"x\"]}";
