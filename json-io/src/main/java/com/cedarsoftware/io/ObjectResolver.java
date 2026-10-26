@@ -839,6 +839,7 @@ public class ObjectResolver extends Resolver
 
         Object[] items = jsonObj.getItems();
         if (items == null) {
+            refuseObjectAsItems(jsonObj);
             return;
         }
 
@@ -1277,6 +1278,9 @@ public class ObjectResolver extends Resolver
 
         final Object[] jsonItems = jsonObj.getItems();
         if (ArrayUtilities.isEmpty(jsonItems)) {
+            if (jsonItems == null) {
+                refuseObjectAsItems(jsonObj);
+            }
             return;
         }
         final int len = jsonItems.length;

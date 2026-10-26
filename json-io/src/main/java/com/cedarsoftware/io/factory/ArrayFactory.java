@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.ClassFactory;
+import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.Resolver;
 import com.cedarsoftware.util.ArrayUtilities;
@@ -46,6 +47,11 @@ public class ArrayFactory<T> implements ClassFactory {
             if ((jObj.containsKey("value") || jObj.containsKey("_v"))
                     && converter.isConversionSupportedFor(jObj.getClass(), c)) {
                 return (T) jObj.setFinishedTarget(converter.convert(jObj, c), true);
+            }
+            // A JSON object holding fields is no array: it was a null, its fields lost (Resolver.refuseObjectAsItems
+            // says so for other arrays and for collections)
+            if (jObj.getKeys() == null && !jObj.isEmpty()) {
+                throw new JsonIoException("Expecting a JSON array for " + c.getTypeName() + ", found a JSON object");
             }
             return (T)jObj.setTarget(null);
         }

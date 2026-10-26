@@ -181,6 +181,10 @@ element `[i]`:
 com.acme.Line.qty: Value 'three' not parseable as an int value or outside -2147483648 to 2147483647 (at $.lines[1].qty)
 ```
 
+A JSON object holding fields, read as a list, a set or an array, is such an error ("Expecting a JSON array for
+java.util.ArrayList, found a JSON object (at $.lines)"): it was an empty one, its fields lost. An empty object is the
+empty one still.
+
 Its cause is the exception the conversion threw. An object below an element of an array of objects (`Line[]`) is not
 located: the read releases an array's elements as it goes, which keeps its peak memory about a fifth lower on a large
 array; its message names the class and field as before.

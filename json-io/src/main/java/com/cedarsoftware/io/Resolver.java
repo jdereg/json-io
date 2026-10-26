@@ -2831,6 +2831,18 @@ public abstract class Resolver {
         return false;
     }
 
+    /**
+     * A JSON object holding fields, read as a collection or an array: an error. It was an empty one (an array of
+     * numbers or text null), its fields lost. An empty object, or one holding only its {@code @id} or a {@code @type}
+     * naming a collection, loses nothing and is the empty one still.
+     */
+    static void refuseObjectAsItems(JsonObject jsonObj) {
+        if (jsonObj.isMapShaped() && jsonObj.getKeys() == null && jsonObj.fastEntryCount() > 0) {
+            throw new JsonIoException("Expecting a JSON array for " + jsonObj.getRawType().getTypeName()
+                    + ", found a JSON object");
+        }
+    }
+
     public boolean valueToTarget(JsonObject jsonObject) {
         if (jsonObject.getType() == null) {
             return false;

@@ -169,14 +169,17 @@ public class MapResolver extends Resolver {
         return true;
     }
 
-    /** A JSON object naming no type of its own (no @type, no @items), asked for as a Collection. */
+    /**
+     * A JSON object holding fields (no @items), asked for as a Collection, as Java mode refuses one too (see
+     * Resolver.refuseObjectAsItems). An empty object loses nothing: the empty collection.
+     */
     private static boolean isPlainObjectReadAsItems(Object value, Type shape) {
         if (!(value instanceof JsonObject)) {
             return false;
         }
         JsonObject jObj = (JsonObject) value;
         Class<?> raw = TypeUtilities.getRawClass(shape);
-        return jObj.isMapShaped() && jObj.getKeys() == null && jObj.getTypeString() == null && raw != null
+        return jObj.isMapShaped() && jObj.getKeys() == null && jObj.fastEntryCount() > 0 && raw != null
                 && Collection.class.isAssignableFrom(raw);
     }
 
