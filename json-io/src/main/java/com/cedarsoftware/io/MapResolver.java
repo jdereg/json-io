@@ -583,111 +583,116 @@ public class MapResolver extends Resolver {
         // By index, through the allocation-free accessors: this loop runs for every object a Maps-mode read builds,
         // and is too large for the JIT to eliminate an entrySet() entry per field.
         final int fieldCount = jsonObj.fastEntryCount();
-        for (int i = 0; i < fieldCount; i++) {
-            final Object fieldKey = jsonObj.fastKeyAt(i);
-            final String fieldName = fieldKey instanceof String ? (String) fieldKey : null;
-            final Object rhs = jsonObj.fastValueAt(i);
+        int i = 0;
+        try {
+            for (; i < fieldCount; i++) {
+                final Object fieldKey = jsonObj.fastKeyAt(i);
+                final String fieldName = fieldKey instanceof String ? (String) fieldKey : null;
+                final Object rhs = jsonObj.fastValueAt(i);
             
-            if (rhs == null) {
-                // No action needed - null is already the value in the map entry
-                continue;
-            }
-            
-            // Pre-cache class and injector to avoid repeated lookups
-            final Class<?> rhsClass = rhs.getClass();
-            final Injector injector = (injectorMap == null || fieldName == null) ? null : injectorMap.get(fieldName);
-
-            if (rhs instanceof List) {
-                // A TOON list: its @refs patched in it, then on as any other value
-                traverseListForRefs((List<Object>) rhs);
-            }
-
-            if (rhsClass.isArray()) {   // RHS is an array
-                // Traverse array inline to patch @refs - avoids JsonObject wrapper allocation
-                // No put needed - rhs is already the value in the map entry
-                traverseArrayForRefs((Object[]) rhs);
-            } else if (rhs instanceof JsonObject) {
-                JsonObject jObj = (JsonObject) rhs;
-                if (injector != null) {
-                    final Class<?> injectorType = injector.getType();
-                    boolean isNonRefClass = readOptions.isNonReferenceableClass(injectorType);
-                    if (isNonRefClass) {
-                        // The value itself, as Java mode reads it and as the field holds it when written untyped
-                        // (it stayed the typed object, holding the value -- or, for a date's map form, a stray null).
-                        // A @ref names the object it refers to (a class declared non-referenceable for the read
-                        // only may be written with @id): one value for both, as Java mode reads them.
-                        JsonObject held = jObj.isReference() ? resolveReference(jObj) : jObj;
-                        Object value;
-                        try {
-                            value = held.isFinished() ? held.getTarget() : nonRefValue(held, injectorType);
-                        } catch (RuntimeException e) {
-                            continue;   // the JSON as written (see convertIfNonRefType)
-                        }
-                        held.setFinishedTarget(value, true);
-                        jsonObj.fastSetValueAt(i, value);   // Direct update - avoids indexOf() lookup
-                        continue;
-                    }
-                }
-                JsonObject refObject = resolveReference(jObj);
-                if (refObject != null) {    // Correct field references
-                    jsonObj.fastSetValueAt(i, refObject);   // Direct update - avoids indexOf() lookup
-                } else {
-                    // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)
-                    // to their Java equivalents and update the Map entry
-                    Object converted = convertIfNonRefType(jObj, jObj.getRawType());
-                    if (converted != null) {
-                        jObj.setFinishedTarget(converted, true);
-                        jsonObj.fastSetValueAt(i, converted);  // Direct update - avoids indexOf() lookup
-                    } else {
-                        push(jObj);
-                    }
-                }
-            } else if (injector != null) {
-                // The code below is 'upgrading' the RHS values in the JsonObject Map
-                // by using the @type class name (when specified and exists), to coerce the vanilla
-                // JSON values into the proper types defined by the class listed in @type.  This is
-                // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
-                // improve the final types of values in the maps RHS, to be of the field type that
-                // was optionally specified in @type.
-                final Class<?> fieldType = injector.getType();
-                // Performance: Skip conversion if field type is Object or already matches
-                if (fieldType == Object.class || rhsClass == fieldType) {
+                if (rhs == null) {
+                    // No action needed - null is already the value in the map entry
                     continue;
                 }
-                // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
-                int fieldTargetKind = scalarTargetKind(fieldType);
-                Object fastValue = fastScalarCoercion(rhs, rhsClass, fieldTargetKind);
-                // FAST ISO TEMPORAL PARSE — strict java.time parse for the ISO-8601 wire
-                // format before the Converter → DateUtilities regex path. Maps-mode
-                // counterpart of the ObjectResolver hooks (see FastIsoParser); non-ISO
-                // strings fall through to Converter, preserving flexible-format support.
-                if (fastValue == null && rhs instanceof String) {
-                    fastValue = FastIsoParser.parse((String) rhs, fieldType);
+            
+                // Pre-cache class and injector to avoid repeated lookups
+                final Class<?> rhsClass = rhs.getClass();
+                final Injector injector = (injectorMap == null || fieldName == null) ? null : injectorMap.get(fieldName);
+
+                if (rhs instanceof List) {
+                    // A TOON list: its @refs patched in it, then on as any other value
+                    traverseListForRefs((List<Object>) rhs);
                 }
-                if (fastValue != null) {
-                    jsonObj.fastSetValueAt(i, fastValue);   // Direct update - avoids indexOf() lookup
-                } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
-                    if (rhs instanceof JsonObject && !Map.class.isAssignableFrom(fieldType)) {
-                        resolveTypedValues((JsonObject) rhs);
+
+                if (rhsClass.isArray()) {   // RHS is an array
+                    // Traverse array inline to patch @refs - avoids JsonObject wrapper allocation
+                    // No put needed - rhs is already the value in the map entry
+                    traverseArrayForRefs((Object[]) rhs);
+                } else if (rhs instanceof JsonObject) {
+                    JsonObject jObj = (JsonObject) rhs;
+                    if (injector != null) {
+                        final Class<?> injectorType = injector.getType();
+                        boolean isNonRefClass = readOptions.isNonReferenceableClass(injectorType);
+                        if (isNonRefClass) {
+                            // The value itself, as Java mode reads it and as the field holds it when written untyped
+                            // (it stayed the typed object, holding the value -- or, for a date's map form, a stray null).
+                            // A @ref names the object it refers to (a class declared non-referenceable for the read
+                            // only may be written with @id): one value for both, as Java mode reads them.
+                            JsonObject held = jObj.isReference() ? resolveReference(jObj) : jObj;
+                            Object value;
+                            try {
+                                value = held.isFinished() ? held.getTarget() : nonRefValue(held, injectorType);
+                            } catch (RuntimeException e) {
+                                continue;   // the JSON as written (see convertIfNonRefType)
+                            }
+                            held.setFinishedTarget(value, true);
+                            jsonObj.fastSetValueAt(i, value);   // Direct update - avoids indexOf() lookup
+                            continue;
+                        }
                     }
-                    Object fieldValue;
-                    try {
-                        // (an enum from the value its @IoValue method writes, then its name)
-                        fieldValue = convertValue(rhs, fieldType);
-                    } catch (RuntimeException e) {
-                        // A value the field's type cannot hold ("three" for an int) stays as written (see
-                        // convertIfNonRefType), as does a TOON list where an array or collection is declared, of
-                        // elements the Converter does not build (an @IoValue class): left a list, as JSON's array is
+                    JsonObject refObject = resolveReference(jObj);
+                    if (refObject != null) {    // Correct field references
+                        jsonObj.fastSetValueAt(i, refObject);   // Direct update - avoids indexOf() lookup
+                    } else {
+                        // In Maps mode, convert JsonObjects with simple types (Byte, Short, etc.)
+                        // to their Java equivalents and update the Map entry
+                        Object converted = convertIfNonRefType(jObj, jObj.getRawType());
+                        if (converted != null) {
+                            jObj.setFinishedTarget(converted, true);
+                            jsonObj.fastSetValueAt(i, converted);  // Direct update - avoids indexOf() lookup
+                        } else {
+                            push(jObj);
+                        }
+                    }
+                } else if (injector != null) {
+                    // The code below is 'upgrading' the RHS values in the JsonObject Map
+                    // by using the @type class name (when specified and exists), to coerce the vanilla
+                    // JSON values into the proper types defined by the class listed in @type.  This is
+                    // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
+                    // improve the final types of values in the maps RHS, to be of the field type that
+                    // was optionally specified in @type.
+                    final Class<?> fieldType = injector.getType();
+                    // Performance: Skip conversion if field type is Object or already matches
+                    if (fieldType == Object.class || rhsClass == fieldType) {
                         continue;
                     }
-                    jsonObj.fastSetValueAt(i, fieldValue);  // Direct update - avoids indexOf() lookup
-                } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {
-                    // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
-                    // Note: fieldType cannot be String.class here (line 390 checks rhsClass == fieldType).
-                    // StringBuilder/StringBuffer have converter support, so they're handled above.
-                    jsonObj.fastSetValueAt(i, null);        // Direct update - avoids indexOf() lookup
+                    // Fast path for common JSON primitive coercions (Long->int, Double->float, etc.)
+                    int fieldTargetKind = scalarTargetKind(fieldType);
+                    Object fastValue = fastScalarCoercion(rhs, rhsClass, fieldTargetKind);
+                    // FAST ISO TEMPORAL PARSE — strict java.time parse for the ISO-8601 wire
+                    // format before the Converter → DateUtilities regex path. Maps-mode
+                    // counterpart of the ObjectResolver hooks (see FastIsoParser); non-ISO
+                    // strings fall through to Converter, preserving flexible-format support.
+                    if (fastValue == null && rhs instanceof String) {
+                        fastValue = FastIsoParser.parse((String) rhs, fieldType);
+                    }
+                    if (fastValue != null) {
+                        jsonObj.fastSetValueAt(i, fastValue);   // Direct update - avoids indexOf() lookup
+                    } else if (converter.isConversionSupportedFor(rhsClass, fieldType)) {
+                        if (rhs instanceof JsonObject && !Map.class.isAssignableFrom(fieldType)) {
+                            resolveTypedValues((JsonObject) rhs);
+                        }
+                        Object fieldValue;
+                        try {
+                            // (an enum from the value its @IoValue method writes, then its name)
+                            fieldValue = convertValue(rhs, fieldType);
+                        } catch (RuntimeException e) {
+                            // A value the field's type cannot hold ("three" for an int) stays as written (see
+                            // convertIfNonRefType), as does a TOON list where an array or collection is declared, of
+                            // elements the Converter does not build (an @IoValue class): left a list, as JSON's array is
+                            continue;
+                        }
+                        jsonObj.fastSetValueAt(i, fieldValue);  // Direct update - avoids indexOf() lookup
+                    } else if (rhs instanceof String && StringUtilities.isEmpty((String)rhs)) {
+                        // Fallback: Allow "" to null out a field when converter doesn't support String conversion.
+                        // Note: fieldType cannot be String.class here (line 390 checks rhsClass == fieldType).
+                        // StringBuilder/StringBuffer have converter support, so they're handled above.
+                        jsonObj.fastSetValueAt(i, null);        // Direct update - avoids indexOf() lookup
+                    }
                 }
             }
+        } catch (RuntimeException e) {
+            throw partError(String.valueOf(jsonObj.fastKeyAt(i)), null, e);     // the field it was reading
         }
         // Clear target for non-Map types to save memory (Maps mode returns JsonObjects for POJOs).
         // For Map types (HashMap, TreeMap, etc.), keep the target - rehashMaps() will populate it.

@@ -172,6 +172,19 @@ ReadOptions opts = new ReadOptionsBuilder()
 Map<String, Object> graph = JsonIo.toMaps(json, opts).asClass(Map.class);  // Will throw if unknown @type found
 ```
 
+### When a Read Fails
+A read that cannot be done throws a `JsonIoException` saying what failed and where in the document: its message's
+first line ends with a JSONPath -- a field or a map's key `.name` (`["name"]` where it is not a plain name), an
+element `[i]`:
+
+```
+com.acme.Line.qty: Value 'three' not parseable as an int value or outside -2147483648 to 2147483647 (at $.lines[1].qty)
+```
+
+Its cause is the exception the conversion threw. An object below an element of an array of objects (`Line[]`) is not
+located: the read releases an array's elements as it goes, which keeps its peak memory about a fifth lower on a large
+array; its message names the class and field as before.
+
 ### Generic Type Support
 For working with generic types like `List<Employee>` or complex nested generics, use the `TypeHolder` class to preserve full generic type information:
 

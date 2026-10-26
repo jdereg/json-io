@@ -147,6 +147,8 @@ public abstract class Resolver {
     
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
+    // traverseJsonObject calls under way: only the outermost names where in the document a failure stands
+    private int traversals;
     private final List<JsonObject> mapsToRehash = new ArrayList<>();
     // The objects whose creator is running: an argument that refers to one of them cannot be given to it
     private Set<JsonObject> creating;
@@ -1327,42 +1329,111 @@ public abstract class Resolver {
      */
     public <T> T traverseJsonObject(JsonObject root) {
         push(root);
-
-        while (!stack.isEmpty()) {
-            final JsonObject jsonObj = stack.pop();
-
-            if (jsonObj.isFinished) {
-                continue;
+        traversals++;
+        try {
+            while (!stack.isEmpty()) {
+                final JsonObject jsonObj = stack.pop();
+                try {
+                    traverseOne(root, jsonObj);
+                } catch (RuntimeException e) {
+                    throw traversals == 1 ? located(root, jsonObj, e) : e;
+                }
             }
-
-            // Diagnostic: record this visit. ENABLED is a static final boolean
-            // read at class init from a system property; when false, the
-            // entire branch is JIT-eliminated (zero cost in production).
-            if (ResolverInstrumentation.ENABLED) {
-                ResolverInstrumentation.recordVisit(
-                        jsonObj,
-                        readOptions,
-                        jsonObj == root ? ResolverInstrumentation.SRC_ROOT
-                                        : ResolverInstrumentation.SRC_NON_ROOT);
-            }
-
-            // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
-            switch (jsonObj.getJsonType()) {
-                case ARRAY:
-                    traverseArray(jsonObj);
-                    break;
-                case COLLECTION:
-                    traverseCollection(jsonObj);
-                    break;
-                case MAP:
-                    traverseMap(jsonObj);
-                    break;
-                default:
-                    traverseObject(jsonObj);
-                    break;
-            }
+        } finally {
+            traversals--;
         }
         return (T) root.getTarget();
+    }
+
+    /** One object of the traversal, read by its kind. */
+    private void traverseOne(JsonObject root, JsonObject jsonObj) {
+        if (jsonObj.isFinished) {
+            return;
+        }
+
+        // Diagnostic: record this visit. ENABLED is a static final boolean
+        // read at class init from a system property; when false, the
+        // entire branch is JIT-eliminated (zero cost in production).
+        if (ResolverInstrumentation.ENABLED) {
+            ResolverInstrumentation.recordVisit(
+                    jsonObj,
+                    readOptions,
+                    jsonObj == root ? ResolverInstrumentation.SRC_ROOT
+                                    : ResolverInstrumentation.SRC_NON_ROOT);
+        }
+
+        // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
+        switch (jsonObj.getJsonType()) {
+            case ARRAY:
+                traverseArray(jsonObj);
+                break;
+            case COLLECTION:
+                traverseCollection(jsonObj);
+                break;
+            case MAP:
+                traverseMap(jsonObj);
+                break;
+            default:
+                traverseObject(jsonObj);
+                break;
+        }
+    }
+
+    /**
+     * A failure reading a part of the object being traversed: the steps from that object to the part -- a field's
+     * name or a map's key (a String), an element's index (an Integer) -- with the failure's own message and cause.
+     * The traversal ({@link #traverseJsonObject}) names where in the document that part stands.
+     */
+    static final class PartError extends JsonIoException {
+        private static final long serialVersionUID = 1L;
+        final ArrayDeque<Object> steps = new ArrayDeque<>();
+
+        private PartError(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /**
+     * {@code e}, a failure reading the part at {@code step} of what is being read: its message (begun with
+     * {@code prefix}, where given and not already) and its cause -- a JsonIoException's own, or {@code e} itself.
+     */
+    static PartError partError(Object step, String prefix, RuntimeException e) {
+        String message = e.getMessage();
+        if (prefix != null && (message == null || !message.startsWith(prefix))) {
+            message = prefix + message;
+        }
+        PartError part = new PartError(message, e instanceof JsonIoException && e.getCause() != null ? e.getCause() : e);
+        part.setStackTrace(e.getStackTrace());
+        if (e instanceof PartError) {
+            part.steps.addAll(((PartError) e).steps);
+        }
+        part.steps.addFirst(step);
+        return part;
+    }
+
+    /**
+     * {@code e}, a failure traversing {@code failing}, naming where in the document it stands: " (at $.lines[1].qty)"
+     * after the message's first line. As it was where that place is not found (the document's root, an object no
+     * longer reachable from it).
+     */
+    private static RuntimeException located(JsonObject root, JsonObject failing, RuntimeException e) {
+        List<Object> steps = e instanceof PartError ? new ArrayList<>(((PartError) e).steps) : Collections.emptyList();
+        String path;
+        try {
+            path = DocumentPath.of(root, failing, steps);
+        } catch (RuntimeException notFound) {
+            return e;
+        }
+        if (path == null || path.equals("$")) {
+            return e;
+        }
+        String message = String.valueOf(e.getMessage());
+        int lineEnd = message.indexOf('\n');
+        String at = " (at " + path + ")";
+        message = lineEnd < 0 ? message + at : message.substring(0, lineEnd) + at + message.substring(lineEnd);
+        JsonIoException located = new JsonIoException(message, e instanceof JsonIoException ? e.getCause() : e);
+        located.setStackTrace(e.getStackTrace());
+        return located;
     }
 
     protected void traverseObject(JsonObject jsonObj) {

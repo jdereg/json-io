@@ -452,14 +452,9 @@ public class ObjectResolver extends Resolver
      */
     private static JsonIoException fieldError(Class<?> javaClass, ReadOptionsBuilder.FieldAssignmentPlan plan,
                                               RuntimeException e) {
-        String where = javaClass.getName() + "." + plan.injector.getName() + ": ";
-        String message = e.getMessage();
-        if (message != null && message.startsWith(where) && e instanceof JsonIoException) {
-            return (JsonIoException) e;      // already says where
-        }
-        // A JsonIoException that only wraps the conversion's exception hands over that exception as the cause
-        Throwable cause = e instanceof JsonIoException && e.getCause() != null ? e.getCause() : e;
-        return new JsonIoException(where + message, cause);
+        // A JsonIoException that only wraps the conversion's exception hands over that exception as the cause; the
+        // field is the step to it, for the traversal to say where in the document it stands
+        return partError(plan.injector.getName(), javaClass.getName() + "." + plan.injector.getName() + ": ", e);
     }
 
     /**
@@ -907,132 +902,136 @@ public class ObjectResolver extends Resolver
         final boolean innerElementsUntyped = rawInnerElementType == null || rawInnerElementType == Object.class;
         final int innerElementKind = innerElementsUntyped ? TARGET_OTHER : scalarTargetKind(rawInnerElementType);
 
-        for (Object item : items) {
-            Object element = item;
-            // Strategy 0: OPTIONAL - an element declared Optional, written as its content (or null)
-            if (optionalElements) {
-                final int index = idx;
-                Object wrapped = asOptionalElement(rawElementType, elementType, element, jsonObj, isList
-                        ? (built, value) -> ((List<Object>) built).set(index, value)
-                        : (built, value) -> ((Collection<Object>) built).add(value));
-                if (wrapped != NOT_BARE_OPTIONAL) {
-                    if (wrapped != FORWARD_OPTIONAL || isList) {
-                        col.add(wrapped == FORWARD_OPTIONAL ? null : wrapped);
+        try {
+            for (Object item : items) {
+                Object element = item;
+                // Strategy 0: OPTIONAL - an element declared Optional, written as its content (or null)
+                if (optionalElements) {
+                    final int index = idx;
+                    Object wrapped = asOptionalElement(rawElementType, elementType, element, jsonObj, isList
+                            ? (built, value) -> ((List<Object>) built).set(index, value)
+                            : (built, value) -> ((Collection<Object>) built).add(value));
+                    if (wrapped != NOT_BARE_OPTIONAL) {
+                        if (wrapped != FORWARD_OPTIONAL || isList) {
+                            col.add(wrapped == FORWARD_OPTIONAL ? null : wrapped);
+                        }
+                        idx++;
+                        continue;
+                    }
+                }
+
+                // Strategy 1: NULL - fastest check
+                if (element == null) {
+                    col.add(null);
+                    idx++;
+                    continue;
+                }
+
+                // A TOON list inside this one, which would be added as it was parsed
+                if (element instanceof Collection
+                        && (!hasSpecificElementType || rawElementType.isAssignableFrom(element.getClass()))) {
+                    if (!nestedElementIsCollectionType || innerElementsUntyped) {
+                        resolveParsedList((Collection<Object>) element);    // nothing declared for what it holds
+                    } else if (!(element instanceof List) || !coerceScalarsInPlace((List<Object>) element,
+                            rawInnerElementType, innerElementKind)) {
+                        element = ((Collection<?>) element).toArray();      // as the declared List<X>: Strategy 6
+                    }
+                }
+
+                final Class<?> elementClass = element.getClass();
+                final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
+                final boolean elementIsArray = elementClass.isArray();
+
+                // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
+                // This is a major optimization for collections of simple types (List<String>, Set<UUID>, etc.)
+                // IMPORTANT: Skip this fast path for:
+                //   - JsonObject (needs instantiation/traversal)
+                //   - Object[] (nested arrays need processing)
+                //   - When element type is Object (could contain anything)
+                if (hasSpecificElementType
+                        && jsonElement == null
+                        && !elementIsArray
+                        && rawElementType.isAssignableFrom(elementClass)) {
+                    col.add(element);
+                    idx++;
+                    continue;
+                }
+
+                // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
+                if (hasSpecificElementType && targetElementKind != TARGET_OTHER) {
+                    Object coerced = fastScalarCoercion(element, elementClass, targetElementKind);
+                    if (coerced != null) {
+                        col.add(coerced);
+                        idx++;
+                        continue;
+                    }
+                }
+
+                // Strategy 4: REFERENCE - check before expensive factory lookup
+                if (jsonElement != null && jsonElement.isReference()) {
+                    addReferenceToCollection(jsonElement, jsonObj, col, idx, isList, rawElementType);
+                    idx++;
+                    continue;
+                }
+
+                // Strategy 5: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
+                Object special = readWithFactoryIfExists(element, rawElementType);
+                if (special != null) {
+                    col.add(special);
+                    idx++;
+                    continue;
+                }
+
+                // Strategy 6: NESTED ARRAY - array within collection
+                if (elementIsArray) {
+                    // Determine the type for the nested array/collection.
+                    // If elementType is a Collection type (e.g., List<User>), wrap as collection.
+                    // If elementType is an array type (e.g., User[]), create an actual array.
+                    if (nestedElementIsCollectionType) {
+                        // elementType is a Collection (e.g., List<User>), use it directly
+                        wrapArrayAndAddToCollection((Object[]) element, elementType, col);
+                    } else if (nestedElementIsArrayType) {
+                        // elementType is an array type (e.g., User[]), create an actual array
+                        Object arrayInstance = handleNestedArrayElement((Object[]) element, elementType);
+                        col.add(arrayInstance);
+                    } else {
+                        // Fallback: extract component type for nested collection
+                        Type nestedType = TypeUtilities.extractArrayComponentType(elementType);
+                        if (nestedType == null) {
+                            nestedType = Object.class;
+                        }
+                        wrapArrayAndAddToCollection((Object[]) element, nestedType, col);
                     }
                     idx++;
                     continue;
                 }
-            }
 
-            // Strategy 1: NULL - fastest check
-            if (element == null) {
-                col.add(null);
-                idx++;
-                continue;
-            }
-
-            // A TOON list inside this one, which would be added as it was parsed
-            if (element instanceof Collection
-                    && (!hasSpecificElementType || rawElementType.isAssignableFrom(element.getClass()))) {
-                if (!nestedElementIsCollectionType || innerElementsUntyped) {
-                    resolveParsedList((Collection<Object>) element);    // nothing declared for what it holds
-                } else if (!(element instanceof List) || !coerceScalarsInPlace((List<Object>) element,
-                        rawInnerElementType, innerElementKind)) {
-                    element = ((Collection<?>) element).toArray();      // as the declared List<X>: Strategy 6
-                }
-            }
-
-            final Class<?> elementClass = element.getClass();
-            final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
-            final boolean elementIsArray = elementClass.isArray();
-
-            // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
-            // This is a major optimization for collections of simple types (List<String>, Set<UUID>, etc.)
-            // IMPORTANT: Skip this fast path for:
-            //   - JsonObject (needs instantiation/traversal)
-            //   - Object[] (nested arrays need processing)
-            //   - When element type is Object (could contain anything)
-            if (hasSpecificElementType
-                    && jsonElement == null
-                    && !elementIsArray
-                    && rawElementType.isAssignableFrom(elementClass)) {
-                col.add(element);
-                idx++;
-                continue;
-            }
-
-            // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
-            if (hasSpecificElementType && targetElementKind != TARGET_OTHER) {
-                Object coerced = fastScalarCoercion(element, elementClass, targetElementKind);
-                if (coerced != null) {
-                    col.add(coerced);
+                // Strategy 7: JSONOBJECT - needs instantiation and traversal
+                if (jsonElement != null) {
+                    // Set the element's full type to the extracted element type, but only if
+                    // the element doesn't already have a type set (e.g., from @type in the JSON).
+                    // This enables proper type inference for nested generic types when
+                    // deserializing JSON without @type markers.
+                    if (jsonElement.getType() == null) {
+                        jsonElement.setType(elementType);
+                    }
+                    seedIncrementalContainerMetadata(elementType, jsonElement);
+                    createInstance(jsonElement);
+                    addResolvedObjectToCollection(jsonElement, col);
                     idx++;
                     continue;
                 }
-            }
 
-            // Strategy 4: REFERENCE - check before expensive factory lookup
-            if (jsonElement != null && jsonElement.isReference()) {
-                addReferenceToCollection(jsonElement, jsonObj, col, idx, isList, rawElementType);
+                // Strategy 8: FALLBACK - direct add (a TOON list as the list or array type declared, see declaredFormOf).
+                // Blank text where a class is declared that nothing built from it is null, as in a field, an array and a
+                // map: it stayed a String in the List<Address>, List<LocalDate>.
+                boolean blank = element instanceof String && StringUtilities.isEmpty((String) element)
+                        && !rawElementType.isInstance(element);
+                col.add(blank ? null : declaredFormOf(element, elementType));
                 idx++;
-                continue;
             }
-
-            // Strategy 5: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
-            Object special = readWithFactoryIfExists(element, rawElementType);
-            if (special != null) {
-                col.add(special);
-                idx++;
-                continue;
-            }
-
-            // Strategy 6: NESTED ARRAY - array within collection
-            if (elementIsArray) {
-                // Determine the type for the nested array/collection.
-                // If elementType is a Collection type (e.g., List<User>), wrap as collection.
-                // If elementType is an array type (e.g., User[]), create an actual array.
-                if (nestedElementIsCollectionType) {
-                    // elementType is a Collection (e.g., List<User>), use it directly
-                    wrapArrayAndAddToCollection((Object[]) element, elementType, col);
-                } else if (nestedElementIsArrayType) {
-                    // elementType is an array type (e.g., User[]), create an actual array
-                    Object arrayInstance = handleNestedArrayElement((Object[]) element, elementType);
-                    col.add(arrayInstance);
-                } else {
-                    // Fallback: extract component type for nested collection
-                    Type nestedType = TypeUtilities.extractArrayComponentType(elementType);
-                    if (nestedType == null) {
-                        nestedType = Object.class;
-                    }
-                    wrapArrayAndAddToCollection((Object[]) element, nestedType, col);
-                }
-                idx++;
-                continue;
-            }
-
-            // Strategy 7: JSONOBJECT - needs instantiation and traversal
-            if (jsonElement != null) {
-                // Set the element's full type to the extracted element type, but only if
-                // the element doesn't already have a type set (e.g., from @type in the JSON).
-                // This enables proper type inference for nested generic types when
-                // deserializing JSON without @type markers.
-                if (jsonElement.getType() == null) {
-                    jsonElement.setType(elementType);
-                }
-                seedIncrementalContainerMetadata(elementType, jsonElement);
-                createInstance(jsonElement);
-                addResolvedObjectToCollection(jsonElement, col);
-                idx++;
-                continue;
-            }
-
-            // Strategy 8: FALLBACK - direct add (a TOON list as the list or array type declared, see declaredFormOf).
-            // Blank text where a class is declared that nothing built from it is null, as in a field, an array and a
-            // map: it stayed a String in the List<Address>, List<LocalDate>.
-            boolean blank = element instanceof String && StringUtilities.isEmpty((String) element)
-                    && !rawElementType.isInstance(element);
-            col.add(blank ? null : declaredFormOf(element, elementType));
-            idx++;
+        } catch (RuntimeException e) {
+            throw partError(idx, null, e);    // the element at that index
         }
     }
 
@@ -1304,108 +1303,113 @@ public class ObjectResolver extends Resolver
         final Object[] refArray = isPrimitive ? null : (Object[]) array;
         final boolean optionalComponents = isOptionalRawType(effectiveRawComponentType);
 
-        for (int i = 0; i < len; i++) {
-            Object element = jsonItems[i];
+        int i = 0;
+        try {
+            for (; i < len; i++) {
+                Object element = jsonItems[i];
 
-            // An element declared Optional, written as its content (or null)
-            if (optionalComponents) {
-                final int index = i;
-                Object wrapped = asOptionalElement(effectiveRawComponentType, effectiveComponentType, element, jsonObj,
-                        (built, value) -> ((Object[]) built)[index] = value);
-                if (wrapped != NOT_BARE_OPTIONAL) {
-                    if (wrapped != FORWARD_OPTIONAL) {
-                        setArrayElement(array, refArray, i, wrapped, false);
+                // An element declared Optional, written as its content (or null)
+                if (optionalComponents) {
+                    final int index = i;
+                    Object wrapped = asOptionalElement(effectiveRawComponentType, effectiveComponentType, element, jsonObj,
+                            (built, value) -> ((Object[]) built)[index] = value);
+                    if (wrapped != NOT_BARE_OPTIONAL) {
+                        if (wrapped != FORWARD_OPTIONAL) {
+                            setArrayElement(array, refArray, i, wrapped, false);
+                        }
+                        continue;
+                    }
+                }
+
+                // Strategy 1: NULL - fastest check
+                if (element == null) {
+                    setArrayElement(array, refArray, i, null, isPrimitive);
+                    continue;
+                }
+
+                // A TOON list among the elements (or among a Map's values), which would be stored as it was parsed
+                if (element instanceof Collection
+                        && (!hasSpecificComponentType || effectiveRawComponentType.isAssignableFrom(element.getClass()))) {
+                    if (hasSpecificComponentType && Collection.class.isAssignableFrom(effectiveRawComponentType)) {
+                        // as the declared List<X>
+                        setArrayElement(array, refArray, i, readNestedCollection(((Collection<?>) element).toArray(),
+                                effectiveComponentType), isPrimitive);
+                        continue;
+                    }
+                    resolveParsedList((Collection<Object>) element);        // no collection declared: as itself
+                }
+
+                final Class<?> elementClass = element.getClass();
+                final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
+                final boolean elementIsArray = elementClass.isArray();
+
+                // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
+                // This is a major optimization for arrays of simple types (String[], Integer[], etc.)
+                // IMPORTANT: Skip this fast path for:
+                //   - JsonObject (needs instantiation/traversal)
+                //   - Object[] (nested arrays need processing)
+                //   - When component type is Object (could contain anything)
+                if (hasSpecificComponentType
+                        && jsonElement == null
+                        && !elementIsArray
+                        && effectiveRawComponentType.isAssignableFrom(elementClass)) {
+                    setArrayElement(array, refArray, i, element, isPrimitive);
+                    continue;
+                }
+
+                // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
+                // JSON only produces Long for integers and Double for decimals.
+                // Convert directly to the target type without going through Converter lookup.
+                if (hasSpecificComponentType) {
+                    if (tryAssignParsedScalarToArray(array, refArray, i, element, elementClass, isPrimitive, targetComponentKind)) {
+                        continue;
+                    }
+                }
+
+                // Strategy 4: REFERENCE - check before expensive factory lookup
+                if (jsonElement != null && jsonElement.isReference()) {
+                    Object resolved = resolveReferenceElement(jsonElement, jsonObj, i, effectiveRawComponentType);
+                    if (resolved != UNRESOLVED_REFERENCE) {
+                        setArrayElement(array, refArray, i, resolved, isPrimitive);
+                    }
+                    // If unresolved, the helper already added it to unresolved references
+                    continue;
+                }
+
+                // Strategy 5: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
+                Object resolved = readWithFactoryIfExists(element, effectiveRawComponentType);
+                if (resolved != null) {
+                    setArrayElement(array, refArray, i, resolved, isPrimitive);
+                    continue;
+                }
+
+                // Strategy 6: NESTED ARRAY - array of arrays
+                if (elementIsArray) {
+                    if (char[].class == effectiveRawComponentType) {
+                        setArrayElement(array, refArray, i, handleCharArrayElement((Object[]) element), isPrimitive);
+                    } else {
+                        setArrayElement(array, refArray, i, handleNestedArrayElement((Object[]) element, effectiveComponentType), isPrimitive);
                     }
                     continue;
                 }
-            }
 
-            // Strategy 1: NULL - fastest check
-            if (element == null) {
-                setArrayElement(array, refArray, i, null, isPrimitive);
-                continue;
-            }
-
-            // A TOON list among the elements (or among a Map's values), which would be stored as it was parsed
-            if (element instanceof Collection
-                    && (!hasSpecificComponentType || effectiveRawComponentType.isAssignableFrom(element.getClass()))) {
-                if (hasSpecificComponentType && Collection.class.isAssignableFrom(effectiveRawComponentType)) {
-                    // as the declared List<X>
-                    setArrayElement(array, refArray, i, readNestedCollection(((Collection<?>) element).toArray(),
-                            effectiveComponentType), isPrimitive);
-                    continue;
-                }
-                resolveParsedList((Collection<Object>) element);        // no collection declared: as itself
-            }
-
-            final Class<?> elementClass = element.getClass();
-            final JsonObject jsonElement = element instanceof JsonObject ? (JsonObject) element : null;
-            final boolean elementIsArray = elementClass.isArray();
-
-            // Strategy 2: DIRECT ASSIGN - skip expensive factory/converter if already correct type
-            // This is a major optimization for arrays of simple types (String[], Integer[], etc.)
-            // IMPORTANT: Skip this fast path for:
-            //   - JsonObject (needs instantiation/traversal)
-            //   - Object[] (nested arrays need processing)
-            //   - When component type is Object (could contain anything)
-            if (hasSpecificComponentType
-                    && jsonElement == null
-                    && !elementIsArray
-                    && effectiveRawComponentType.isAssignableFrom(elementClass)) {
-                setArrayElement(array, refArray, i, element, isPrimitive);
-                continue;
-            }
-
-            // Strategy 3: FAST PRIMITIVE COERCION - avoid readWithFactoryIfExists overhead
-            // JSON only produces Long for integers and Double for decimals.
-            // Convert directly to the target type without going through Converter lookup.
-            if (hasSpecificComponentType) {
-                if (tryAssignParsedScalarToArray(array, refArray, i, element, elementClass, isPrimitive, targetComponentKind)) {
-                    continue;
-                }
-            }
-
-            // Strategy 4: REFERENCE - check before expensive factory lookup
-            if (jsonElement != null && jsonElement.isReference()) {
-                Object resolved = resolveReferenceElement(jsonElement, jsonObj, i, effectiveRawComponentType);
-                if (resolved != UNRESOLVED_REFERENCE) {
+                // Strategy 7: JSONOBJECT - needs instantiation and traversal
+                if (jsonElement != null) {
+                    resolved = processJsonObjectElement(jsonElement, effectiveComponentType);
                     setArrayElement(array, refArray, i, resolved, isPrimitive);
+                    continue;
                 }
-                // If unresolved, the helper already added it to unresolved references
-                continue;
-            }
 
-            // Strategy 5: FACTORY/CONVERTER - handles custom readers, converters (String→Enum, etc.)
-            Object resolved = readWithFactoryIfExists(element, effectiveRawComponentType);
-            if (resolved != null) {
-                setArrayElement(array, refArray, i, resolved, isPrimitive);
-                continue;
+                // Strategy 8: FALLBACK - empty strings and direct assignment
+                boolean isEmptyString = element instanceof String
+                        && ((String) element).trim().isEmpty()
+                        && effectiveRawComponentType != String.class
+                        && effectiveRawComponentType != Object.class;
+                setArrayElement(array, refArray, i, isEmptyString ? null : declaredFormOf(element, effectiveComponentType),
+                        isPrimitive);
             }
-
-            // Strategy 6: NESTED ARRAY - array of arrays
-            if (elementIsArray) {
-                if (char[].class == effectiveRawComponentType) {
-                    setArrayElement(array, refArray, i, handleCharArrayElement((Object[]) element), isPrimitive);
-                } else {
-                    setArrayElement(array, refArray, i, handleNestedArrayElement((Object[]) element, effectiveComponentType), isPrimitive);
-                }
-                continue;
-            }
-
-            // Strategy 7: JSONOBJECT - needs instantiation and traversal
-            if (jsonElement != null) {
-                resolved = processJsonObjectElement(jsonElement, effectiveComponentType);
-                setArrayElement(array, refArray, i, resolved, isPrimitive);
-                continue;
-            }
-
-            // Strategy 8: FALLBACK - empty strings and direct assignment
-            boolean isEmptyString = element instanceof String
-                    && ((String) element).trim().isEmpty()
-                    && effectiveRawComponentType != String.class
-                    && effectiveRawComponentType != Object.class;
-            setArrayElement(array, refArray, i, isEmptyString ? null : declaredFormOf(element, effectiveComponentType),
-                    isPrimitive);
+        } catch (RuntimeException e) {
+            throw partError(i, null, e);    // the element at that index
         }
         jsonObj.clear();
     }
