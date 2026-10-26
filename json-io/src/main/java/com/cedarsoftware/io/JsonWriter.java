@@ -1597,6 +1597,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             gen.writeIntRaw(((Short) obj).intValue());
         } else if (obj instanceof Byte) {
             gen.writeIntRaw(((Byte) obj).intValue());
+        } else if (obj instanceof Character) {
+            writeStringValue(obj.toString());   // text: written as toString() below it was {"v":x}, not JSON
         } else {
             // Safety net for any unexpected runtime type that slips past the callers'
             // gating. Preserves legacy obj.toString() behavior.
