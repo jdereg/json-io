@@ -100,7 +100,7 @@ Employee emp = JsonIo.toJava(json).asClass(Employee.class);
 Employee emp = JsonIo.toJava(inputStream, readOptions).asClass(Employee.class);
 
 // Read JSON to Maps (no classes needed)
-Map map = JsonIo.toMaps(json).asMap();
+Map<String, Object> map = JsonIo.toMaps(json).asClass(Map.class);
 
 // Generic types
 List<Employee> list = JsonIo.toJava(json).asType(new TypeHolder<List<Employee>>(){});
@@ -119,7 +119,7 @@ WriteOptions opts = new WriteOptionsBuilder()
 String json = JsonIo.toJson(myObject, opts);
 ```
 
-This configures: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`,
+This configures: `showTypeInfoNever`, `omitRootTypeInfo()`, `cycleSupport(false)`,
 `stringifyMapKeys(true)`, `writeOptionalAsObject(false)`, `preserveLeafContainerIdentity(false)`,
 `isoDateFormat()` (ISO-8601 dates for `java.util.Date` — `java.time.*` are already ISO-8601),
 and `useMetaPrefixDollar()`.
