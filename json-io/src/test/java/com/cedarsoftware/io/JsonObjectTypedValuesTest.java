@@ -225,4 +225,29 @@ class JsonObjectTypedValuesTest {
         tree.putAsJson("twice", Arrays.asList(shared, shared));
         assertEquals(2, ((Object[]) tree.get("twice")).length);
     }
+
+    public static class Node {
+        public String name;
+        public Node parent;
+        public List<Node> children = new ArrayList<>();
+    }
+
+    /** An object whose fields loop back to it is refused too: its parent was put as null, the link dropped. */
+    @Test
+    void anObjectThatLoopsIsRefused() {
+        Node root = new Node();
+        root.name = "root";
+        Node kid = new Node();
+        kid.name = "kid";
+        kid.parent = root;
+        root.children.add(kid);
+        JsonIoException e = assertThrows(JsonIoException.class, () -> new JsonObject().putAsJson("tree", root));
+        assertTrue(e.getMessage().contains("Cannot put a " + Node.class.getName() + " that holds itself"),
+                e.getMessage());
+
+        root.children.clear();      // no loop: its fields, nested
+        JsonObject tree = new JsonObject();
+        tree.putAsJson("tree", kid);
+        assertEquals("root", ((JsonObject) ((JsonObject) tree.get("tree")).get("parent")).get("name"));
+    }
 }

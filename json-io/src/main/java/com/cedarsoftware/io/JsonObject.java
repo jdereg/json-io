@@ -522,6 +522,16 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return c != null ? c : ReadOptionsBuilder.converterOf(ReadOptionsBuilder.getDefaultReadOptions());
     }
 
+    /** A value that holds itself, which plain JSON, having no references, cannot. */
+    private static final class HoldsItself extends JsonIoException {
+        private static final long serialVersionUID = 1L;
+
+        HoldsItself(Object value) {
+            super("Cannot put a " + value.getClass().getName()
+                    + " that holds itself as JSON: plain JSON has no references");
+        }
+    }
+
     /**
      * The value as plain JSON holds it (see {@link #putAsJson}). {@code holding} is the containers being converted,
      * made on the first: one met again holds itself.
@@ -557,14 +567,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
             if (converter.isConversionSupportedFor(value.getClass(), String.class)) {
                 return converter.convert(value, String.class);
             }
-            return jsonForm(converter.convert(value, Map.class), holding);     // its fields
+            try {
+                return jsonForm(converter.convert(value, Map.class), holding);     // its fields
+            } catch (HoldsItself loop) {
+                throw new HoldsItself(value);   // named by its class, not by the Map of its fields
+            }
         }
         if (holding == null) {
             holding = new IdentityHashMap<>();
         }
         if (holding.put(value, value) != null) {
-            throw new JsonIoException("Cannot put a " + value.getClass().getName()
-                    + " that holds itself as JSON: plain JSON has no references");
+            throw new HoldsItself(value);
         }
         Object json;
         if (map) {

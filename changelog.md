@@ -270,17 +270,18 @@
     * a Map as a `JsonObject` with text keys, a Collection or array as an `Object[]` (a `char[]` as its text), and an `Optional` as its content or null;
     * any other object as a `JsonObject` of its fields.
 
-    A JsonObject is put as is. A value that holds itself is refused, because plain JSON has no references. `put()` is unchanged and keeps the Java value, for trees that go back to json-io.
+    A JsonObject is put as is. A value that holds itself is refused, named by its class, because plain JSON has no references: a container that holds itself, and (with java-util 4.118.0, whose object-to-Map conversion keeps a loop) an object whose fields loop back to it, where its parent was put as null. `put()` is unchanged and keeps the Java value, for trees that go back to json-io.
   * **No memory cost.** Each JsonObject holds its read's Converter where it held a cached hash, so it stays 64 bytes on JDK 17 and 25 and 72 on JDK 8; JsonObjectArray and JsonObjectMap are unchanged (measured). The JSON parser and the TOON reader set it on every object they make, and `putAsJson` on the objects it makes. Java serialization doesn't write it: an object read back uses the default Converter.
   * **Groovy:** `jsonObject.get(key, SomeClass)` now calls the typed getter. Before, it called Groovy's `Map.get(key, default)`, which puts the default when the key is absent. Only a Class or a TypeHolder passed as that default is affected.
-  * **Tests.** `JsonObjectTypedValuesTest` (7) covers:
+  * **Tests.** `JsonObjectTypedValuesTest` (8) covers:
     * each getter;
     * agreement with `Converter.convert(get(key), type)` over 4 keys and 8 classes;
     * defaults for an absent key and for null;
     * generic types;
     * the JSON form of 21 kinds of value and the text the tree then writes, with no `@type`;
     * the getter turning `putAsJson`'s value back into the original;
-    * `put` unchanged, and a cycle and container keys refused.
+    * `put` unchanged, and a cycle and container keys refused;
+    * an object whose fields loop back to it refused, named by its class (`anObjectThatLoopsIsRefused`, which fails with java-util before its loop fix).
 
     None compile against 4.117.0. 15 mutants: 14 caught at first, and the last, a JsonObject put as is, once a test pinned it.
 
