@@ -127,7 +127,10 @@ This `Map` representation can be rewritten to a JSON String or Stream, ensuring 
 original input JSON stream. This feature is especially useful for handling JSON strings or streams containing class
 references not present in the JVM parsing the JSON. It allows complete reading and potential manipulation of the content,
 followed by rewriting the String or stream, providing a robust solution for dynamic data handling. A typed value the
-JSON holds ({"@type":"Integer","value":5}, a date, a UUID) is the value in the tree, and is written back with its type.
+JSON holds ({"@type":"Integer","value":5}, a date, a UUID) is the value in the tree, and is written back with its type,
+in the form json-io writes. Text json-io wrote comes back unchanged. A typed value in another spelling json-io accepts
+comes back in json-io's own spelling: `{"@type":"LocalDate","value":"2026-01-15"}` is rewritten as
+`{"@type":"LocalDate","localDate":"2026-01-15"}`, the same value. The tree holds the value, not the spelling.
 
 _Example: Manipulate JSON without having the referenced classes_
 ```java
