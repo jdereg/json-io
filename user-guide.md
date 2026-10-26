@@ -106,7 +106,9 @@ The rules behind the table:
   - A simple enum present on the classpath is its constant; absent, it stays the `JsonObject`.
   - When the root's `@type` names a class on the classpath, the root's own fields take the types that class declares:
     `"age":30` is an `Integer` for an `int age`, `"born":"1990-05-01"` a `LocalDate`. The object itself is still a
-    `JsonObject`, and the objects below it are untouched.
+    `JsonObject`, and the objects below it are untouched. json-io 5.0 drops this, so the root's fields keep JSON's
+    values like every other object's ([json-io 5.0](/docs/json-io-5.0.md)); `get("age", Integer.class)` reads the same
+    in both.
   - What `asClass()` or `asType()` asks for at the root (next section).
 - **A value that does not convert stays as written.** `{"@type":"BigDecimal","value":"abc"}`, a date that is no date, a
   constant its enum does not have, or `"three"` where the root's class declares an `int` stays the JSON that holds it.
@@ -409,10 +411,10 @@ WriteOptions options = new WriteOptionsBuilder()
 String json = JsonIo.toJson(myObject, options);
 ```
 
-This sets: `showTypeInfoNever`, `showRootTypeInfo(false)`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
-`writeOptionalAsObject(false)`, `preserveLeafContainerIdentity(false)`, and `useMetaPrefixDollar()`. These
-will become the defaults in json-io 5.0.0. Individual settings can be overridden after the call
-(e.g., `.standardJson().cycleSupport(true)`).
+This sets: `showTypeInfoNever`, `omitRootTypeInfo()`, `cycleSupport(false)`, `stringifyMapKeys(true)`,
+`writeOptionalAsObject(false)`, `preserveLeafContainerIdentity(false)`, `isoDateFormat()`, and `useMetaPrefixDollar()`.
+These will become the defaults in json-io 5.0.0 ([json-io 5.0](/docs/json-io-5.0.md) says what each changes).
+Individual settings can be overridden after the call (e.g., `.standardJson().cycleSupport(true)`).
 
 ### Leaf-Container Identity (4.101.0 default change)
 

@@ -52,7 +52,8 @@ appropriate class types are used based on the class names specified in the optio
 ### Standard JSON Output — `standardJson()`
 
 The `standardJson()` convenience method configures json-io to produce standard JSON output that is interoperable
-with Jackson and other mainstream JSON libraries. It sets the planned json-io 5.0.0 defaults in a single call:
+with Jackson and other mainstream JSON libraries. It sets the planned json-io 5.0.0 defaults in a single call (what
+each changes, and how to keep the 4.x output: [json-io 5.0](/docs/json-io-5.0.md)):
 
 ```java
 WriteOptions options = new WriteOptionsBuilder()
@@ -62,7 +63,7 @@ WriteOptions options = new WriteOptionsBuilder()
 
 This enables:
 - **`showTypeInfoNever()`** — no `@type` metadata in output
-- **`showRootTypeInfo(false)`** — no `@type` on the root object
+- **`omitRootTypeInfo()`** — no `@type` on the root object
 - **`cycleSupport(false)`** — no `@id`/`@ref` cycle tracking (~35-40% faster)
 - **`stringifyMapKeys(true)`** — `Map<Long, V>` writes `{"100": value}` instead of `@keys`/`@items`
 - **`writeOptionalAsObject(false)`** — `Optional.of(x)` writes as bare `x`; `Optional.empty()` writes as `null` (Jackson-compatible primitive form)

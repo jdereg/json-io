@@ -1506,7 +1506,7 @@ public class WriteOptionsBuilder {
      * Java webapps actually emit).
      * <ul>
      *   <li>showTypeInfoNever - No @type metadata in the output</li>
-     *   <li>showRootTypeInfo(false) - No @type on the root object either</li>
+     *   <li>omitRootTypeInfo - No @type on the root object either</li>
      *   <li>cycleSupport(false) - No @id/@ref cycle tracking</li>
      *   <li>stringifyMapKeys(true) - Map&lt;Long, V&gt; writes {"100": value} not @keys/@items</li>
      *   <li>writeOptionalAsObject(false) - Optional values write as bare value / null (Jackson-compatible)</li>

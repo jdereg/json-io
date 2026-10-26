@@ -332,6 +332,12 @@
   * The guide said a rewritten tree matches the input. Plain JSON comes back with the same values, each written in json-io's form (`1.10` read as a `Double` is written `1.1`, `1e2` as `100.0`).
 
   Every example in the new section was compiled and run.
+* **DOCS**: **`docs/json-io-5.0.md` lists what changes in json-io 5.0, and how to prepare on 4.x.** Each item is marked as announced (the docs already said so), decided, or proposed:
+  * The `standardJson()` settings become the defaults. A table gives the six that change, with the 4.x call that keeps today's output.
+  * Deprecated APIs are removed.
+  * **Map mode (decided):** a root `@type` stops typing the root's fields, so the tree is the same with or without the class. Code that casts such a field (`(Integer) map.get("age")`) can switch now to `jsonObject.get("age", Integer.class)`, which reads the same on 4.x and 5.0.
+
+  The user guide's `standardJson()` paragraph also listed `showRootTypeInfo(false)`, which is no method (`omitRootTypeInfo()`), and left out `isoDateFormat()`. The same slip in the write-options guide and the `standardJson()` javadoc is corrected too.
 
 #### 4.117.0 - 2026-10-16
 * **BUG FIX**: **Options copied from options that write enums as objects wrote enums as bare strings.** `new WriteOptionsBuilder(options)` is "a copy as a starting point", and it copied the settings one by one by hand. `enumWriter` was not among them, since the copy was added in 2024 (`enumPublicFieldsOnly` was, from two weeks later). So with `writeEnumAsJsonObject(true)` on the original, the copy wrote `"loc":"CELL"` where the original wrote `"loc":{"name":"CELL"}`, with no error. **`customOptions` (what `addCustomOption()` stores) was left out too**: a `WriteOptions` copy lost every custom option of the original (a `ReadOptions` copy has always copied them). Found in n-cube, whose servlet copied its options only to keep the stream open; the editor reads `delta.loc.name`, and from n-cube 6.74.0 every difference opened in a compare dialog read `null` on both sides. It is in every json-io from the day the copy was written: 4.108.0 and 4.110.0 through 4.116.0 all write the bare name from the copy (checked), and a copy of options that never set the enum form is unaffected.
