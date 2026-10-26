@@ -367,6 +367,11 @@ public class MapResolver extends Resolver {
         } else {
             // Regular String-key Map - use traverseFields to patch @refs in values
             traverseFields(jsonObj);
+            Object[] items = jsonObj.getItems();
+            if (items != null) {
+                // @items under a class not on the classpath, read as a map in its place: its items as an array's
+                traverseArrayForRefs(items);
+            }
         }
 
         // Add to rehash list so entries are copied to target Map (for asClass(TreeMap.class) etc.)
@@ -983,7 +988,11 @@ public class MapResolver extends Resolver {
         Class<?> own = jsonObj.getRawType();     // null only when its target is a collection already
         if (own != null && isObjectOfAClass(own) && ClassUtilities.getClassIfEnum(own) == null) {
             // @items under a class of fields (it was a ClassCastException): the JSON as written, as such an object of a
-            // class not on the classpath is. Not an enum's: that is an EnumSet's form, built below.
+            // class not on the classpath is, its items read as an array's are. Not an enum's: that is an EnumSet's
+            // form, built below.
+            if (items != null) {
+                traverseArrayForRefs(items);
+            }
             return;
         }
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
