@@ -149,6 +149,44 @@ JsonObject obj = JsonIo.toMaps(jsonString).asClass(JsonObject.class);
 String originalType = obj.getTypeString();  // Preserved @type value
 ```
 
+### Typed Values: `get(key, Class)` and `putAsJson(key, value)`
+A Map mode tree holds JSON's own values: a number is a `Long` or a `Double`, a date or a UUID is text. So a cast fails
+(`(Integer) m.get("qty")` on a `Long`), and `put("when", zonedDateTime)` writes `"when":{"@type":"ZonedDateTime",...}`
+where the payload had text. A `JsonObject` has a getter that takes the type you want, and a setter that stores the
+JSON form, so the tree writes back as plain JSON:
+```java
+JsonObject order = JsonIo.toMaps(json).asClass(JsonObject.class);
+
+int qty = order.get("qty", int.class);                                   // Long 3 in the tree
+LocalDate shipped = order.get("shipped", LocalDate.class);               // "2026-01-15"
+int batch = order.get("batchSize", int.class, 100);                      // 100 when absent or null
+List<LocalDate> due = order.get("due", new TypeHolder<List<LocalDate>>() {});   // each element converted
+Map<String, Integer> counts = order.get("counts", new TypeHolder<Map<String, Integer>>() {});
+
+order.putAsJson("shipped", LocalDate.of(2026, 2, 1));     // "shipped":"2026-02-01"
+order.putAsJson("qty", 4);                                // "qty":4
+order.putAsJson("when", ZonedDateTime.now());             // text, no @type
+String updated = JsonIo.toJson(order, writeOptions);
+```
+- **`get(key, type)`** is `Converter.convert(get(key), type)`, using the Converter of json-io's default `ReadOptions`.
+  It drops in for that call and for a cast. A value that is already of the class is returned as is, for example a
+  nested `JsonObject` asked for as a `JsonObject`. An absent key or a null value converts as null does (0 for `int`,
+  null for most classes). The forms that take a default return it in that case instead. The `TypeHolder` forms convert
+  generic types element by element: `List<LocalDate>`, `Map<String, Integer>`, `Optional<UUID>`. Conversions you
+  registered on the `ReadOptions` of the read don't apply to these getters. To build a class of your own from a
+  nested object, use `JsonIo.toJava(order.get("address", JsonObject.class), readOptions).asClass(Address.class)`.
+- **`putAsJson(key, value)`** stores what a Map mode read of plain JSON would have produced:
+  - **Numbers**: a `Long` or a `Double` when either holds the value exactly (an `Integer` 5 is 5, a `Float` 1.1f is
+    1.1), otherwise a `BigInteger` or `BigDecimal`.
+  - **Values the Converter turns into text**: that text. This covers dates and times, UUIDs, enum names, a
+    `Character`, a `Locale`, a URI.
+  - **Containers**: a Map becomes a `JsonObject` with text keys, a Collection or array becomes an `Object[]`, and an
+    `Optional` becomes its content or null. Their contents are converted the same way.
+  - **Any other object**: a `JsonObject` of its fields.
+
+  Plain `put()` still stores the Java value, which json-io writes with its type. Use it for trees that go back to
+  json-io.
+
 ### Parsing JSON with Unknown Classes
 If the JSON contains class references (`@type` entries) that are not available on the classpath,
 use the `toMaps()` API which automatically handles unknown types gracefully:

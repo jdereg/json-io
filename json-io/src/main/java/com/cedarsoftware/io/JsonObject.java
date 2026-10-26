@@ -16,7 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.cedarsoftware.util.MathUtilities;
+import com.cedarsoftware.util.convert.Converter;
 
 /**
  * Intermediate-form representation of a JSON object as parsed from the wire and
@@ -389,6 +394,193 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         int idx = indexOf(key);
         if (idx < 0) return null;
         return data[idx];
+    }
+
+    /**
+     * The value for the key as the given class, converted by the Converter json-io's default ReadOptions use: the
+     * same as {@code converter.convert(get(key), type)}, so it replaces a cast ({@code (Integer) map.get("qty")},
+     * which fails on the Long a Maps-mode read gives) or such a call. A value that is already of the class is
+     * returned as it is (a nested JsonObject asked for as a JsonObject). An absent key or a null value converts as
+     * null does: 0 for a primitive class, null for most others.
+     * <pre>{@code
+     * JsonObject order = JsonIo.toMaps(json, null).asClass(JsonObject.class);
+     * int qty = order.get("qty", int.class);                          // a Long 3 in the tree
+     * LocalDate shipped = order.get("shipped", LocalDate.class);      // "2026-01-15"
+     * }</pre>
+     * Conversions registered on the ReadOptions of the read are not consulted here.
+     *
+     * @param key  the key
+     * @param type the class to return the value as
+     * @param <T>  the class's type
+     * @return the value as {@code type}
+     * @throws IllegalArgumentException if the value does not convert to {@code type}, or {@code type} is null
+     * @see #get(Object, Class, Object)
+     * @see #get(Object, TypeHolder)
+     * @see #putAsJson(Object, Object)
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T get(Object key, Class<T> type) {
+        Object value = get(key);
+        return type != null && type.isInstance(value) ? (T) value : converter().convert(value, type);
+    }
+
+    /**
+     * The value for the key as the given class, as {@link #get(Object, Class)} gives it, or the default when the key
+     * is absent or its value is null.
+     * <pre>{@code
+     * int batchSize = options.get("batchSize", int.class, 100);
+     * }</pre>
+     *
+     * @param key          the key
+     * @param type         the class to return the value as
+     * @param defaultValue what to return for an absent key or a null value
+     * @param <T>          the class's type
+     * @return the value as {@code type}, or {@code defaultValue}
+     * @throws IllegalArgumentException if the value does not convert to {@code type}, or {@code type} is null
+     */
+    public <T> T get(Object key, Class<T> type, T defaultValue) {
+        return get(key) == null ? defaultValue : get(key, type);
+    }
+
+    /**
+     * The value for the key as the given type, which may be generic, converted by the Converter json-io's default
+     * ReadOptions use: a JSON array of text as a {@code List<LocalDate>}, a nested object as a
+     * {@code Map<String, Integer>}, each element, key and value converted. The same as
+     * {@code converter.convert(get(key), type.getType())}; an absent key or a null value converts as null does.
+     * <pre>{@code
+     * List<LocalDate> due = invoice.get("due", new TypeHolder<List<LocalDate>>() {});
+     * }</pre>
+     *
+     * @param key  the key
+     * @param type the type to return the value as
+     * @param <T>  the type
+     * @return the value as {@code type}
+     * @throws IllegalArgumentException if the value (or one of its elements) does not convert, or {@code type} is null
+     * @see #get(Object, TypeHolder, Object)
+     */
+    public <T> T get(Object key, TypeHolder<T> type) {
+        return converter().convert(get(key), type == null ? null : type.getType());
+    }
+
+    /**
+     * The value for the key as the given type, as {@link #get(Object, TypeHolder)} gives it, or the default when the
+     * key is absent or its value is null.
+     *
+     * @param key          the key
+     * @param type         the type to return the value as
+     * @param defaultValue what to return for an absent key or a null value
+     * @param <T>          the type
+     * @return the value as {@code type}, or {@code defaultValue}
+     * @throws IllegalArgumentException if the value (or one of its elements) does not convert, or {@code type} is null
+     */
+    public <T> T get(Object key, TypeHolder<T> type, T defaultValue) {
+        return get(key) == null ? defaultValue : get(key, type);
+    }
+
+    /**
+     * Puts the value as plain JSON holds it -- what a Maps-mode read of plain JSON would have put there -- so the
+     * tree writes back as plain JSON, its shape unchanged for whoever reads it next. {@link #put(Object, Object)}
+     * keeps the Java value, which json-io writes with its type ({@code "when":{"@type":"ZonedDateTime",..}}), for a
+     * tree that goes back to json-io; this is the mirror of {@link #get(Object, Class)}, which turns the JSON value
+     * back into the Java one.
+     * <ul>
+     *     <li><b>A number</b> is a Long or a Double when one holds it exactly ({@code 5} for an Integer, {@code 1.1}
+     *     for a Float 1.1f or a BigDecimal 1.10), else a BigInteger or a BigDecimal.</li>
+     *     <li><b>A value the Converter writes as text</b> is that text: a date or time ({@code "2026-01-15"}), a UUID,
+     *     an enum's name, a Character, a Locale, a URI, a Class name ...</li>
+     *     <li><b>A Map</b> is a JsonObject, its keys text; <b>a Collection or an array</b> an Object[] (a char[] is its
+     *     text); <b>an Optional</b> its content or null. What they hold is put the same way.</li>
+     *     <li><b>Any other object</b> is a JsonObject of its fields, as the Converter turns an object into a Map.</li>
+     *     <li>null, a String, a Boolean, a Long, a Double and a JsonObject are put as they are.</li>
+     * </ul>
+     * <pre>{@code
+     * order.putAsJson("shipped", LocalDate.of(2026, 1, 15));     // "shipped":"2026-01-15"
+     * order.putAsJson("qty", 3);                                  // "qty":3
+     * }</pre>
+     *
+     * @param key   the key
+     * @param value the value to put, in its JSON form
+     * @return the previous value for the key, or null
+     * @throws JsonIoException if the value holds itself (plain JSON has no references)
+     */
+    public Object putAsJson(Object key, Object value) {
+        return put(key, jsonForm(value, null));
+    }
+
+    /** The Converter json-io's default ReadOptions use, as a read with them does. */
+    private static Converter converter() {
+        ReadOptions options = ReadOptionsBuilder.getDefaultReadOptions();
+        return options instanceof ReadOptionsBuilder.DefaultReadOptions
+                ? ((ReadOptionsBuilder.DefaultReadOptions) options).converter()
+                : new Converter(options.getConverterOptions());
+    }
+
+    /**
+     * The value as plain JSON holds it (see {@link #putAsJson}). {@code holding} is the containers being converted,
+     * made on the first: one met again holds itself.
+     */
+    private static Object jsonForm(Object value, IdentityHashMap<Object, Object> holding) {
+        if (value == null || value instanceof String || value instanceof Boolean || value instanceof Long
+                || value instanceof Double || value instanceof JsonObject) {
+            return value;
+        }
+        if (value instanceof Float) {
+            return Double.parseDouble(value.toString());        // as it is written: 1.1f is 1.1
+        }
+        if (value instanceof Number) {
+            try {
+                return MathUtilities.parseToMinimalNumericType(value.toString());
+            } catch (NumberFormatException notANumeral) {
+                // a Number of a class of its own: its text, or its fields, below
+            }
+        }
+        if (value instanceof AtomicBoolean) {
+            return ((AtomicBoolean) value).get();
+        }
+        if (value instanceof Optional) {
+            return jsonForm(((Optional<?>) value).orElse(null), holding);
+        }
+        if (value instanceof char[]) {
+            return new String((char[]) value);
+        }
+        boolean map = value instanceof Map;
+        if (!map && !(value instanceof Collection) && !value.getClass().isArray()) {
+            Converter converter = converter();
+            if (converter.isSimpleTypeConversionSupported(value.getClass(), String.class)) {
+                return converter.convert(value, String.class);
+            }
+            return jsonForm(converter.convert(value, Map.class), holding);     // its fields
+        }
+        if (holding == null) {
+            holding = new IdentityHashMap<>();
+        }
+        if (holding.put(value, value) != null) {
+            throw new JsonIoException("Cannot put a " + value.getClass().getName()
+                    + " that holds itself as JSON: plain JSON has no references");
+        }
+        Object json;
+        if (map) {
+            JsonObject object = new JsonObject();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                Object name = entry.getKey() instanceof String ? entry.getKey() : jsonForm(entry.getKey(), holding);
+                if (name instanceof JsonObject || name instanceof Object[]) {
+                    throw new JsonIoException("Cannot put a map whose key is a " + entry.getKey().getClass().getName()
+                            + " as JSON: a JSON object's keys are text");
+                }
+                object.put(String.valueOf(name), jsonForm(entry.getValue(), holding));
+            }
+            json = object;
+        } else {
+            Object[] items = value instanceof Collection ? ((Collection<?>) value).toArray() : null;
+            int length = items != null ? items.length : Array.getLength(value);
+            Object[] array = new Object[length];
+            for (int i = 0; i < length; i++) {
+                array[i] = jsonForm(items != null ? items[i] : Array.get(value, i), holding);
+            }
+            json = array;
+        }
+        holding.remove(value);
+        return json;
     }
 
     @Override
