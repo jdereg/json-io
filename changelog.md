@@ -1,6 +1,6 @@
 ### Revision History
 
-#### 4.118.0 - (unreleased)
+#### 4.118.0 - 2026-10-26
 **Upgrading from 4.117.0 -- what can change a result.** Each row is pinned by `UpgradeTo4118NotesTest`; every
 example gave the 4.117.0 answer shown. json-io reads and converts through java-util, whose 4.118.0 has its own table
 (ZonedDateTime zones, `parseToMinimalNumericType`, an object's reference loop as a Map): see java-util's
@@ -41,7 +41,7 @@ example gave the 4.117.0 answer shown. json-io reads and converts through java-u
 | A String with an unpaired surrogate | written as `?` | escaped (`"\ud800"`); reads back |
 | TOON with type info: a whole-number `Double` where nothing declares the type | `1`, read back a `Long` | carries `$type`; reads back a `Double` |
 
-* **BUILD**: `java-util` 4.117.0 → **4.118.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.118.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
+* **BUILD**: `java-util` 4.117.0 → **4.118.0**, released the same day: json-io depends on the java-util of its own version number. From it json-io uses `Converter.convert(Object, Type)` (the typed getters), the ISO zoned reading and the bracketed offset (every `ZonedDateTime` zone reads back), the object-to-Map loop (`putAsJson` refuses one), `parseToMinimalNumericType` (`floatPointBoth()`, TOON) and `FastReader.readUntil` with a stop below a character (strict mode).
 * **BUG FIX**: Strict JSON mode now rejects numbers such as `1.e20`, where an exponent with multiple digits previously hid the missing fractional digit. Both the streaming tokenizer and object reader enforce this check; permissive JSON5 parsing is unchanged.
 * **BUG FIX**: **Strict JSON mode refuses leading zeros and `-.5`.** RFC 8259 writes the integer part of a number as `0` alone or as a digit 1-9 followed by digits, with a digit right after the minus sign. `strictJson()` accepted `01`, `-01`, `00`, `007` and `00.5` (reading 1, -1, 0, 7 and 0.5), and accepted `-.5` while refusing `.5`. Now each is a parse error, "Leading zeros not allowed in strict JSON mode" or "Leading decimal point not allowed in strict JSON mode", through `JsonIo.createTokenizer()` and `JsonIo.toJava()` alike. Non-strict reading is unchanged: `01` is 1 and `-.5` is -0.5. Found while reviewing #439 (the entry above).
   * **Tests.** `JsonTokenizerTest`: the refused forms through the tokenizer and through `toJava()` in arrays and objects; what strict mode still accepts (`0`, `-0`, `0.5`, `0.05`, `0e5`, `10`, `-1000`, `100.001`, `[0,0 , 0]`); and non-strict reading unchanged. 15 of them fail on 4.117.0, and removing either check fails a test.
