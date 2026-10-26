@@ -738,13 +738,6 @@ public class Writers {
     }
 
     public static class ZonedDateTimeWriter extends PrimitiveTypeWriter {
-        private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
-                .append(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-                .appendLiteral('[')
-                .appendZoneId()
-                .appendLiteral(']')
-                .toFormatter();
-
         protected String getKey() {
             return "zonedDateTime";
         }
@@ -757,15 +750,13 @@ public class Writers {
                 gen.writeString(null);
                 return;
             }
-            // If it's UTC/Z, convert to explicit UTC zone
-            if (zdt.getZone().equals(ZoneOffset.UTC) || zdt.getZone().getId().equals("Z")) {
-                zdt = zdt.withZoneSameInstant(ZoneId.of("UTC"));
-            }
-            // IANA zone ids ([A-Za-z0-9_/+-]) and the ISO offset form never need escaping
+            // As ISO_ZONED_DATE_TIME writes it, and toString() and the Converter: a zone that is an offset is the offset
+            // alone (Z, +05:00), a region follows in brackets (-05:00[America/New_York], Z[UTC]); each reads back as
+            // written. IANA zone ids ([A-Za-z0-9_/+-]) and the ISO offset form never need escaping.
             char[] buf = new char[40 + zdt.getZone().getId().length()];
             int n = TemporalChars.zonedDateTime(buf, 0, zdt);
             if (n < 0) {
-                gen.writeStringUnescaped(FORMATTER.format(zdt));
+                gen.writeStringUnescaped(DateTimeFormatter.ISO_ZONED_DATE_TIME.format(zdt));
                 return;
             }
             gen.writeStringUnescaped(buf, n);

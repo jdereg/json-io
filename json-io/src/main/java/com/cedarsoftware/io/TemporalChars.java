@@ -136,32 +136,12 @@ final class TemporalChars {
     }
 
     /**
-     * The ZonedDateTimeWriter wire form: ISO_OFFSET_DATE_TIME + {@code [zoneId]}.
-     * Returns -1 on out-of-range year. Caller sizes the buffer for the zone id.
+     * ISO_ZONED_DATE_TIME semantics -- the JSON ZonedDateTimeWriter form, and what {@code toString()} and java-util's
+     * Converter give for ZonedDateTime → String: offset always printed; bracketed zone id only when the zone is a
+     * region id, NOT a plain {@link ZoneOffset} ({@code ..Z}, {@code ..+05:00}, {@code ..-05:00[America/New_York]}).
+     * Returns -1 when the year falls outside 0..9999. Caller sizes the buffer for the zone id.
      */
     static int zonedDateTime(char[] b, int p, ZonedDateTime zdt) {
-        p = localDateTime(b, p, zdt.toLocalDateTime());
-        if (p < 0) {
-            return -1;
-        }
-        p = offsetId(b, p, zdt.getOffset().getId());
-        b[p++] = '[';
-        String zid = zdt.getZone().getId();
-        int n = zid.length();
-        zid.getChars(0, n, b, p);
-        p += n;
-        b[p++] = ']';
-        return p;
-    }
-
-    /**
-     * ISO_ZONED_DATE_TIME semantics — the form java-util's Converter produces for
-     * ZonedDateTime → String: offset always printed; bracketed zone id only when the
-     * zone is a region id, NOT a plain {@link ZoneOffset}. (Contrast with
-     * {@link #zonedDateTime}, the JSON ZonedDateTimeWriter form, which always
-     * brackets.) Returns -1 when the year falls outside 0..9999.
-     */
-    static int zonedDateTimeIsoZoned(char[] b, int p, ZonedDateTime zdt) {
         p = localDateTime(b, p, zdt.toLocalDateTime());
         if (p < 0) {
             return -1;
@@ -201,7 +181,7 @@ final class TemporalChars {
         } else if (value instanceof ZonedDateTime) {
             ZonedDateTime zdt = (ZonedDateTime) value;
             b = new char[40 + zdt.getZone().getId().length()];
-            n = zonedDateTimeIsoZoned(b, 0, zdt);
+            n = zonedDateTime(b, 0, zdt);
         } else if (value instanceof OffsetDateTime) {
             b = new char[39];
             n = offsetDateTime(b, 0, (OffsetDateTime) value);

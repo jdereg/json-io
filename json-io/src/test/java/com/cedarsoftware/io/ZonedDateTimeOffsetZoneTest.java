@@ -10,10 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * A ZonedDateTime whose zone is an offset (+05:00, not a region) reads back: json-io writes it
- * {"zonedDateTime":"2026-01-15T10:00:00+05:00[+05:00]"}, and could not read that ("Issue parsing date-time, other
- * characters present: [+05:00]") in every 4.x release, in a field, in a list or at the root. With java-util 4.118.0 the
- * bracketed offset is read: the same instant and offset, in the zone GMT+05:00 (as the text without the bracket gives).
+ * A ZonedDateTime whose zone is an offset (+05:00, not a region) reads back, in a field, in an Object field or at the
+ * root: json-io writes it as the offset alone (2026-01-15T10:00:00+05:00). The form json-io 4.x wrote,
+ * {"zonedDateTime":"2026-01-15T10:00:00+05:00[+05:00]"}, it could not read ("Issue parsing date-time, other characters
+ * present: [+05:00]") in every 4.x release; with java-util 4.118.0 it reads: the same instant and offset, in the zone
+ * GMT+05:00 (as the text without the bracket gives where the Converter reads it).
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -42,7 +43,7 @@ class ZonedDateTimeOffsetZoneTest {
         for (String offset : new String[] {"+05:00", "-03:30", "+05:45", "+14:00"}) {
             ZonedDateTime at = ZonedDateTime.of(2026, 1, 15, 10, 0, 0, 0, ZoneOffset.of(offset));
             String json = JsonIo.toJson(at, null);
-            assertTrue(json.contains(offset + "[" + offset + "]"), json);
+            assertTrue(json.contains("10:00:00" + offset + "\""), json);
             ZonedDateTime back = JsonIo.toJava(json, null).asClass(ZonedDateTime.class);
             assertEquals(at.toInstant(), back.toInstant(), json);
             assertEquals(at.getOffset(), back.getOffset(), json);
@@ -55,6 +56,12 @@ class ZonedDateTimeOffsetZoneTest {
             assertEquals(at.toInstant(), ((ZonedDateTime) read.any).toInstant());
             Map<?, ?> tree = JsonIo.toMaps(JsonIo.toJson(meeting, null), null).asClass(Map.class);
             assertEquals(at.toInstant(), ((ZonedDateTime) tree.get("any")).toInstant());
+
+            String written4x = "{\"@type\":\"ZonedDateTime\",\"zonedDateTime\":\"2026-01-15T10:00:00" + offset + "["
+                    + offset + "]\"}";
+            ZonedDateTime old = JsonIo.toJava(written4x, null).asClass(ZonedDateTime.class);
+            assertEquals(at.toInstant(), old.toInstant(), written4x);
+            assertEquals(at.getOffset(), old.getOffset(), written4x);
         }
     }
 }
