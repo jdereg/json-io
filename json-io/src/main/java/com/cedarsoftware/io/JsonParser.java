@@ -285,7 +285,8 @@ class JsonParser {
                         error("Expected @items to have an array [], but found: " + value.getClass().getName());
                     }
                     jObj = new JsonObjectArray();
-                    applyPendingMetadata(jObj, suggestedType, pendingType, pendingTypeString, pendingId, pendingRefId);
+                    applyPendingMetadata(jObj, suggestedType, typeHoldingItems(pendingType, pendingTypeString),
+                            pendingTypeString, pendingId, pendingRefId);
                     loadItems((Object[]) value, jObj);
                     preAlloc = false;
                 } else if (StringUtilities.equals(field, KEYS)) {
@@ -574,6 +575,20 @@ class JsonParser {
             error("Expected @keys to have an array [], but found: " + value.getClass().getName());
         }
         jObj.setKeys((Object[]) value);
+    }
+
+    /**
+     * The type of an object holding @items whose @type is {@code type}: in Java mode, none where the class it names is
+     * not on the classpath and a map class stands in for it (see {@link #stringToClass}). It is read as an object
+     * holding @items with no @type is -- by the type its place declares, an Object[] where none is -- as the map,
+     * which holds none of its items, was read empty.
+     */
+    private Class<?> typeHoldingItems(Class<?> type, String typeName) {
+        if (type != null && readOptions.isReturningJavaObjects() && Map.class.isAssignableFrom(type)
+                && ClassUtilities.forName(readOptions.getTypeNameAlias(typeName), classLoader) == null) {
+            return null;
+        }
+        return type;
     }
 
     private Class<?> stringToClass(String className) {
