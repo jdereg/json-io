@@ -283,6 +283,15 @@
     * `put` unchanged, and a cycle and container keys refused.
 
     None compile against 4.117.0. 15 mutants: 14 caught at first, and the last, a JsonObject put as is, once a test pinned it.
+* **BUG FIX**: **An object whose `@type` is a class of fields but which holds `@items` is no longer a ClassCastException.** `{"@type":"com.acme.Line","@items":[1,2]}` is JSON json-io writes for no such class. In every release it failed in both modes with `Line cannot be cast to class java.util.Collection` (`java.lang.Object cannot be cast ...` in Map mode), naming neither the problem nor where it was.
+  * **Java mode** now says what is wrong and where: `Expecting a JSON object for com.acme.Line, found a JSON array (@items) (at $.lines[0])`. This mirrors the error for a JSON object read as a list.
+  * **Map mode** leaves it as the JSON it is, as it already did for such an object of a class not on the classpath: written back unchanged, and read as its items when asked for as a `List`. A value class holding `@items` (`{"@type":"Integer","@items":[1]}`) now also stays as written, like any value that doesn't convert. It used to fail the read, because the Map-mode check for an EnumSet looked only at `@items`; it now looks for an enum too.
+  * **Tests.** `ClassOfFieldsWithItemsTest` (4):
+    * Java mode at the root, in a field, in a list and in an array, with the location;
+    * Map mode at the root, nested and in lists, asked for as a `List` and as its class, and read back through `toJava(tree)`, with value classes holding `@items`;
+    * untyped `@items` objects, collection classes and objects with fields, read as before.
+
+    3 tests fail on the previous code. Mutants of the Map mode test caught every condition but one: the null check, which is kept on purpose. A JsonObject with no type reaches that code only when its target is already a collection; no read I could construct does that, but dropping the check would turn that case into a NullPointerException. The EnumSet change and the Java mode check were each caught too.
 
 #### 4.117.0 - 2026-10-16
 * **BUG FIX**: **Options copied from options that write enums as objects wrote enums as bare strings.** `new WriteOptionsBuilder(options)` is "a copy as a starting point", and it copied the settings one by one by hand. `enumWriter` was not among them, since the copy was added in 2024 (`enumPublicFieldsOnly` was, from two weeks later). So with `writeEnumAsJsonObject(true)` on the original, the copy wrote `"loc":"CELL"` where the original wrote `"loc":{"name":"CELL"}`, with no error. **`customOptions` (what `addCustomOption()` stores) was left out too**: a `WriteOptions` copy lost every custom option of the original (a `ReadOptions` copy has always copied them). Found in n-cube, whose servlet copied its options only to keep the stream open; the editor reads `delta.loc.name`, and from n-cube 6.74.0 every difference opened in a compare dialog read `null` on both sides. It is in every json-io from the day the copy was written: 4.108.0 and 4.110.0 through 4.116.0 all write the bare name from the copy (checked), and a copy of options that never set the enum form is unaffected.

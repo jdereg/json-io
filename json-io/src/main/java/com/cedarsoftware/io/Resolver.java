@@ -1783,7 +1783,7 @@ public abstract class Resolver {
      * True for the class of an object with fields: not a map, a collection, an array or Object (nor a value type or
      * an enum, planned before this is asked).
      */
-    private static boolean isObjectOfAClass(Class<?> c) {
+    static boolean isObjectOfAClass(Class<?> c) {
         return !Map.class.isAssignableFrom(c) && !Collection.class.isAssignableFrom(c) && !c.isArray()
                 && c != Object.class;
     }

@@ -980,6 +980,12 @@ public class MapResolver extends Resolver {
         }
 
         Object[] items = jsonObj.getItems();
+        Class<?> own = jsonObj.getRawType();     // null only when its target is a collection already
+        if (own != null && isObjectOfAClass(own) && ClassUtilities.getClassIfEnum(own) == null) {
+            // @items under a class of fields (it was a ClassCastException): the JSON as written, as such an object of a
+            // class not on the classpath is. Not an enum's: that is an EnumSet's form, built below.
+            return;
+        }
         Collection<Object> col = (Collection<Object>) jsonObj.getTarget();
         if (col == null) {
             col = (Collection<Object>) createInstance(jsonObj);
@@ -1150,10 +1156,10 @@ public class MapResolver extends Resolver {
         try {
             return super.convertIfNonRefType(jsonObj, type);
         } catch (RuntimeException e) {
-            if (isEnumSet(jsonObj)) {
+            if (enumClass != null && isEnumSet(jsonObj)) {
                 throw e;    // an EnumSet holding a name its enum does not have: read as a set of strings, it failed worse
             }
-            return null;
+            return null;    // a value class holding @items too, as malformed: it was the error
         }
     }
 

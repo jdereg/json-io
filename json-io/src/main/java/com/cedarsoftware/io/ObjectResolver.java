@@ -843,7 +843,13 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        final Collection col = (Collection) jsonObj.getTarget();
+        Object target = jsonObj.getTarget();
+        if (!(target instanceof Collection)) {
+            // A class of fields, holding @items: JSON json-io writes for no such class (it was a ClassCastException)
+            throw new JsonIoException("Expecting a JSON object for " + target.getClass().getName()
+                    + ", found a JSON array (@items)");
+        }
+        final Collection col = (Collection) target;
         ensureCollectionCapacity(col, items.length);
 
         final boolean isList = col instanceof List;
