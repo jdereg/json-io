@@ -2485,7 +2485,7 @@ public class WriteOptionsBuilder {
                         Number.class.isAssignableFrom(type) ||
                         Date.class.isAssignableFrom(type) ||
                         String.class.isAssignableFrom(type) ||
-                        type.isEnum() ||
+                        Enum.class.isAssignableFrom(type) ||    // a constant with a body too (isEnum() is false)
                         isXmlDatatypeValue(type) ||
                         AnnotationResolver.getMetadata(type).isNonReferenceable();
             }

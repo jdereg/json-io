@@ -1429,7 +1429,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                     if (showType) {
                         // Gen-driven {} envelope around @type + value.
                         gen.writeStartObjectRaw();
-                        String alias = writeOptions.getTypeNameAlias(objClass.getName());
+                        String alias = writeOptions.getTypeNameAlias(typeName(obj));
                         gen.writeStringFieldUnescaped(typeKey, alias);
                         gen.writeFieldName("value");
                         writeImpl(val, false);
@@ -1945,6 +1945,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
      * @param obj the object to get the type name for
      * @return the type name to write in the JSON @type field
      */
+    /**
+     * The class name an object is written with: an enum constant's enum, for a constant with a body too -- its class
+     * ({@code Rich$1}) is numbered by the constants with bodies before it, and renumbers as the enum changes.
+     */
+    private static String typeName(Object obj) {
+        return (obj instanceof Enum ? ((Enum<?>) obj).getDeclaringClass() : obj.getClass()).getName();
+    }
+
     private String getTypeNameForOutput(Object obj) {
         // Check if this is a JsonObject with a preserved typeString (middleware case)
         if (obj instanceof JsonObject) {
@@ -2994,7 +3002,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 gen.writeNumberField(idKey, getIdInt(obj));
             }
             if (showType) {
-                String alias = writeOptions.getTypeNameAlias(obj.getClass().getName());
+                String alias = writeOptions.getTypeNameAlias(typeName(obj));
                 gen.writeStringFieldUnescaped(typeKey, alias);
             }
         }

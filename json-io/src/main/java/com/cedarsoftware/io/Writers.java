@@ -468,6 +468,12 @@ public class Writers {
             return "name";
         }
 
+        /** The enum's own name, for a constant with a body too: its class ({@code Rich$1}) renumbers as the enum changes. */
+        @Override
+        public String getTypeName(Object o) {
+            return ((Enum<?>) o).getDeclaringClass().getName();
+        }
+
         public String extractString(Object o) {
             return ((Enum<?>) o).name();
         }

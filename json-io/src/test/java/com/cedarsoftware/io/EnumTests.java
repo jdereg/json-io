@@ -79,9 +79,11 @@ class EnumTests {
 
         String json = TestUtil.toJson(expected, writeOptions);
 
+        // A constant is one object: written in each place, it reads back the same constant. A constant with a body was
+        // written once with an @id and then referenced, its class not being an enum's (isEnum() is false for it)
         assertThat(json)
-                .contains("@ref")
-                .contains("@i");
+                .doesNotContain("@ref")
+                .doesNotContain("@id");
 
         // Package-private outer class is instantiable via reflection (setAccessible)
         DuplicateRefEnum actual = TestUtil.toJava(json, null).asClass(DuplicateRefEnum.class);

@@ -190,7 +190,10 @@ class EnumElementOfDeclaredTypeTest {
         assertSame(Sub.class, back.bases.get(0).getClass(), json);
     }
 
-    /** 4.112.0's text, byte for byte: each enum element with its @type. */
+    /**
+     * 4.112.0's text: each enum element with its @type -- a constant with a body named by its enum, which 4.112.0 wrote
+     * as its own class ({@code Body$1}, numbered by the constants with bodies before it).
+     */
     @Test
     void theLegacyTextKeepsTheType() {
         WriteOptions legacy = new WriteOptionsBuilder().showTypeInfoMinimalLegacy().build();
@@ -199,9 +202,9 @@ class EnumElementOfDeclaredTypeTest {
         assertTrue(json.contains("\"list\":{\"@type\":\"ArrayList\",\"@items\":[{\"@type\":\"" + plain
                 + "\",\"name\":\"A\"},{\"@type\":\"" + plain + "\",\"name\":\"B\"}]}"), json);
         assertTrue(json.contains("\"bodies\":{\"@type\":\"ArrayList\",\"@items\":[{\"@type\":\"" + Body.class.getName()
-                + "$1\",\"name\":\"X\"},{\"@type\":\"" + Body.class.getName() + "\",\"name\":\"Y\"}]}"), json);
+                + "\",\"name\":\"X\"},{\"@type\":\"" + Body.class.getName() + "\",\"name\":\"Y\"}]}"), json);
         assertDeclared(JsonIo.toJava(json, null).asClass(Declared.class), json);
         json = JsonIo.toJson(new Keyed(), legacy);
-        assertTrue(json.contains("\"@keys\":[{\"@type\":\"" + Body.class.getName() + "$1\",\"name\":\"X\"}]"), json);
+        assertTrue(json.contains("\"@keys\":[{\"@type\":\"" + Body.class.getName() + "\",\"name\":\"X\"}]"), json);
     }
 }
