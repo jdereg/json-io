@@ -344,6 +344,7 @@ public class MapResolver extends Resolver {
     @Override
     protected void traverseMap(JsonObject jsonObj) {
         jsonObj.readAsMaps = true;
+        jsonObj.plainJson = plainJson();
         // Guard against reprocessing already-finished objects
         if (jsonObj.isFinished) {
             return;
@@ -598,6 +599,7 @@ public class MapResolver extends Resolver {
      */
     public void traverseFields(final JsonObject jsonObj) {
         jsonObj.readAsMaps = true;
+        jsonObj.plainJson = plainJson();
         final Object target = jsonObj.getTarget();
         final ReadOptions readOptions = getReadOptions();
 
@@ -825,6 +827,7 @@ public class MapResolver extends Resolver {
 
     protected void traverseArray(JsonObject jsonObj) {
         jsonObj.readAsMaps = true;
+        jsonObj.plainJson = plainJson();
         // Guard against reprocessing already-finished objects
         if (markFinishedIfNot(jsonObj)) {
             return;
@@ -973,6 +976,7 @@ public class MapResolver extends Resolver {
     @SuppressWarnings("unchecked")  // raw Collection cast — JsonObject.getTarget()/createInstance return Object
     protected void traverseCollection(final JsonObject jsonObj) {
         jsonObj.readAsMaps = true;
+        jsonObj.plainJson = plainJson();
         // Guard against reprocessing already-finished objects
         if (markFinishedIfNot(jsonObj)) {
             return;

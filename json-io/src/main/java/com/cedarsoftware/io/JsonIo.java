@@ -1629,7 +1629,9 @@ public class JsonIo {
                         typeHolder.getType(),
                         (resolver, readType) -> {
                             JsonParser parser = new JsonParser(input, resolver, strings);
-                            return parser.readValue(readType);
+                            Object parsed = parser.readValue(readType);
+                            resolver.setPlainJson(!parser.typeNamed());
+                            return parsed;
                         },
                         "Error parsing JSON value",
                         null);
@@ -1720,7 +1722,9 @@ public class JsonIo {
                         typeHolder.getType(),
                         (resolver, readType) -> {
                             JsonParser parser = new JsonParser(input, resolver, strings);
-                            return parser.readValue(readType);
+                            Object parsed = parser.readValue(readType);
+                            resolver.setPlainJson(!parser.typeNamed());
+                            return parsed;
                         },
                         "Error parsing JSON value",
                         input);
@@ -1881,6 +1885,7 @@ public class JsonIo {
                                     resolver.getConverter());
                             Object parsed = parser.readValue(readType);
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
+                            resolver.setPlainJson(!parser.metaKeysSeen());
                             resolver.setToonNumbers(true);
                             return parsed;
                         },
@@ -1943,6 +1948,7 @@ public class JsonIo {
                                     resolver.getConverter());
                             Object parsed = parser.readValue(readType);
                             resolver.setParsedListsHoldMeta(parser.metaKeysSeen());
+                            resolver.setPlainJson(!parser.metaKeysSeen());
                             resolver.setToonNumbers(true);
                             return parsed;
                         },

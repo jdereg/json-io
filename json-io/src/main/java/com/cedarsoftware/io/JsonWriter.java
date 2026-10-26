@@ -403,6 +403,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     private boolean forceElementShowType = false;
     // Per-field format pattern from @IoFormat / @JsonFormat — set during writeField(), cleared after
     private String fieldFormatPattern = null;
+    // True while writing what a tree read from plain JSON holds (JsonObject.plainJson): its objects and arrays, and
+    // what they hold. There a BigInteger or BigDecimal no class declares is written as the JSON number it was read from
+    // (1.10 writes 1.10, not {"@type":"BigDecimal","value":"1.10"}). Such a JsonObject sets it (writeImplInternal), any
+    // container keeps it -- another JsonObject, an array, a Collection (a TOON read's list), a Map -- and an object of a
+    // class with fields of its own clears it while its fields are written (writeObject).
+    private boolean bareBigNumbers;
 
     // Pre-fetched WriteOptions values for hot path performance (immutable after construction)
     private final boolean skipNullFields;
@@ -1379,6 +1385,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             return;
         }
 
+        if (bareBigNumbers && (obj instanceof BigDecimal || obj instanceof BigInteger)) {
+            out.write(bigNumberText(obj));
+            return;
+        }
+
         if (neverShowingType && !forceElementShowType) {
             showType = false;
         }
@@ -1460,6 +1471,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 case JSON_OBJECT:
                     // Performance: Use cached type classification instead of repeated isArray/isCollection/isMap checks
                     JsonObject jObj = (JsonObject) obj;
+                    final boolean bareOutside = bareBigNumbers;
+                    bareBigNumbers = bareOutside || jObj.plainJson;
                     switch (jObj.getJsonType()) {
                         case ARRAY:
                             writeJsonObjectArray(jObj, showType);
@@ -1485,6 +1498,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                             }
                             break;
                     }
+                    bareBigNumbers = bareOutside;
                     break;
                 case MAP:
                     if (!writeMapWithStringKeys((Map) obj, showType)) {
@@ -1500,6 +1514,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
                 activePath.remove(obj);
             }
         }
+    }
+
+    /** A BigInteger's or BigDecimal's JSON number text (a BigDecimal as its writer gives it, unquoted). */
+    private String bigNumberText(Object value) {
+        return value instanceof BigDecimal
+                ? Writers.bigDecimalText((BigDecimal) value, writeOptions.getConverterOptions().getMaxPlainDigits())
+                : value.toString();
     }
 
     /**
@@ -3022,6 +3043,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
             }
         }
 
+        final boolean bare = bareBigNumbers;
+        bareBigNumbers = false;     // its fields as Java mode writes them, wherever it stands
         List<WriteFieldPlan> accessors = WriteOptionsBuilder.getWriteFieldPlans(writeOptions, obj.getClass());
         for (int i = 0, len = accessors.size(); i < len; i++) {
             writeField(obj, accessors.get(i));
@@ -3032,6 +3055,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         if (anyGetter != null) {
             writeAnyGetterFields(obj, anyGetter);
         }
+        bareBigNumbers = bare;
 
         if (!bodyOnly) {
             gen.writeEndObjectRaw();

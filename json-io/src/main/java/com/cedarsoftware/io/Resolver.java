@@ -274,6 +274,19 @@ public abstract class Resolver {
         return parsedListsHoldMeta;
     }
 
+    // Whether the document read is plain JSON: it names no @type (a TOON document no $ key). Its BigInteger and
+    // BigDecimal values were JSON numbers, and a Maps-mode read marks its objects so (JsonObject.plainJson). The parser
+    // says so after parsing; false until told, as for a tree handed in (JsonIo.toJava(JsonObject, ..)).
+    private boolean plainJson;
+
+    void setPlainJson(boolean plainJson) {
+        this.plainJson = plainJson;
+    }
+
+    protected boolean plainJson() {
+        return plainJson;
+    }
+
     /**
      * The Converter this read uses. It is shared by every read with the same ReadOptions (the ReadOptions are fixed
      * once built), so a conversion added to it with {@code addConversion()} is kept for later reads with those

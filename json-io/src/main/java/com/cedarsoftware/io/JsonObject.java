@@ -114,6 +114,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
     // a container's copy of its items), which Java mode would otherwise take for its own.
     boolean readAsMaps;
 
+    // Set on every object of a Maps-mode read of JSON that names no @type: its BigInteger and BigDecimal values were
+    // JSON numbers there, and are written as numbers (JsonWriter.bareBigNumbers).
+    boolean plainJson;
+
     // Stored element type for collections/arrays (or value type for maps).
     // Used to preserve generic type information that would otherwise be lost
     // when createInstance changes the type to a concrete class.

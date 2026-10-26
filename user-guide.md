@@ -132,6 +132,15 @@ in the form json-io writes. Text json-io wrote comes back unchanged. A typed val
 comes back in json-io's own spelling: `{"@type":"LocalDate","value":"2026-01-15"}` is rewritten as
 `{"@type":"LocalDate","localDate":"2026-01-15"}`, the same value. The tree holds the value, not the spelling.
 
+Plain JSON, which names no `@type` (what most services and data tools write), comes back with its numbers as numbers.
+A number too large for a `long` is a `BigInteger` in the tree, and with `floatPointBigDecimal()` every decimal is a
+`BigDecimal`; written back, each is the JSON number it was read from, in objects and arrays alike, with or without type
+info: `123456789012345678901234567890` and `1.10` stay as they are, the scale kept. A `BigInteger` or `BigDecimal`
+anywhere else (in JSON that names a type, which json-io wrote, or in a `JsonObject` you built) is written as json-io
+writes one, with its type where no class declares it, so it reads back as that class. One you put into a tree read
+from plain JSON is written as that tree's numbers are. A root that is itself a number, or an array of numbers, is
+written with its type.
+
 _Example: Manipulate JSON without having the referenced classes_
 ```java
 // Read JSON into Map structure (no classes required!)

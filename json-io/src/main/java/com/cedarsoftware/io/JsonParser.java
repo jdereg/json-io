@@ -77,6 +77,7 @@ class JsonParser {
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
     private final Converter converter;       // the read's, on each object made (JsonObject.get(key, type))
+    private boolean typeNamed;               // the document named a @type somewhere
     private int curParseDepth = 0;
     private final int maxParseDepth;
     private final long maxIdValue;
@@ -107,6 +108,11 @@ class JsonParser {
         SUBSTITUTES.put(JSON5_SHORT_ITEMS, ITEMS);
         SUBSTITUTES.put(JSON5_SHORT_TYPE, TYPE);
         SUBSTITUTES.put(JSON5_SHORT_KEYS, KEYS);
+    }
+
+    /** True once the document read so far named a {@code @type}; one that names none is plain JSON. */
+    boolean typeNamed() {
+        return typeNamed;
     }
 
     JsonParser(FastReader reader, Resolver resolver) {
@@ -540,6 +546,7 @@ class JsonParser {
      * @param value Object should be a String, if not an exception is thrown.  It is the value associated to the @type field.
      */
     private Class<?> loadType(Object value) {
+        typeNamed = true;
         if (!(value instanceof String)) {
             error("Expected a String for " + TYPE + ", instead got: " + value);
         }
