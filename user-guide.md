@@ -92,8 +92,11 @@ and write it back -- while a concrete class (`asClass(LinkedHashMap.class)`, `as
 that class. A `JsonObject` follows the `Map` contract: it equals any `Map` with the same entries, in any order.
 
 ### Asking Map Mode for a Type at the Root
-`asClass()` and `asType()` shape the root; below it the tree stays JSON. The root is the type asked for, or a
-`JsonIoException` naming why the JSON cannot be it, as in Java mode:
+`asClass()` and `asType()` shape the root; below it the tree stays JSON. A value below the root that does not convert
+-- `{"@type":"BigDecimal","value":"abc"}`, a date that is no date, a constant its enum does not have, `"three"` where
+the root's `@type` class declares an `int` -- stays the JSON that holds it, as written: the read goes on, and written
+back the text is the same. (An EnumSet holding a name its enum does not have is an error, naming it.) The root is the
+type asked for, or a `JsonIoException` naming why the JSON cannot be it, as in Java mode:
 - **A value type or an array** (`Integer`, `LocalDate`, `ZonedDateTime`, an enum; `LocalDate[]`, `int[]`, `Map[]`):
   converted from the JSON value or array.
 - **`Map`, `List`, `Set`, or a concrete Map or Collection class**: the tree's root, or a copy into that class. A JSON

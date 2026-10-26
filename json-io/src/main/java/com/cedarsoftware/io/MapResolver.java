@@ -191,6 +191,15 @@ public class MapResolver extends Resolver {
             rootType = null;
         }
         verifyRootType(rootType);
+        if (rootType == null && rootObj.getItems() == null && isValueClass(rootObj.getRawType())) {
+            // The root's own @type a value type, none asked for: where its value does not convert, the JSON as written
+            // (see convertIfNonRefType). Asked for, it is converted afterward, and is an error there.
+            try {
+                return super.toJavaObjects(rootObj, null);
+            } catch (RuntimeException e) {
+                return (T) rootObj;
+            }
+        }
         return super.toJavaObjects(rootObj, rootType);
     }
 
@@ -419,7 +428,13 @@ public class MapResolver extends Resolver {
             return jObj;
         }
         if (!jObj.isFinished() && jObj.getTarget() == null) {
-            jObj.setFinishedTarget(convertIfNonRefType(jObj, type), true);
+            Object value;
+            try {
+                value = super.convertIfNonRefType(jObj, type);
+            } catch (RuntimeException e) {
+                return jObj;    // a value that does not convert stays the JSON that holds it (see convertIfNonRefType)
+            }
+            jObj.setFinishedTarget(value, true);
         }
         return jObj.getTarget();
     }
@@ -602,7 +617,12 @@ public class MapResolver extends Resolver {
                         // A @ref names the object it refers to (a class declared non-referenceable for the read
                         // only may be written with @id): one value for both, as Java mode reads them.
                         JsonObject held = jObj.isReference() ? resolveReference(jObj) : jObj;
-                        Object value = held.isFinished() ? held.getTarget() : nonRefValue(held, injectorType);
+                        Object value;
+                        try {
+                            value = held.isFinished() ? held.getTarget() : nonRefValue(held, injectorType);
+                        } catch (RuntimeException e) {
+                            continue;   // the JSON as written (see convertIfNonRefType)
+                        }
                         held.setFinishedTarget(value, true);
                         jsonObj.fastSetValueAt(i, value);   // Direct update - avoids indexOf() lookup
                         continue;
@@ -654,12 +674,10 @@ public class MapResolver extends Resolver {
                     try {
                         // (an enum from the value its @IoValue method writes, then its name)
                         fieldValue = convertValue(rhs, fieldType);
-                    } catch (IllegalArgumentException e) {
-                        if (!(rhs instanceof Collection)) {
-                            throw e;
-                        }
-                        // A TOON list where an array or collection is declared, of elements the Converter does not
-                        // build (an @IoValue class): left a list, as JSON's array is
+                    } catch (RuntimeException e) {
+                        // A value the field's type cannot hold ("three" for an int) stays as written (see
+                        // convertIfNonRefType), as does a TOON list where an array or collection is declared, of
+                        // elements the Converter does not build (an @IoValue class): left a list, as JSON's array is
                         continue;
                     }
                     jsonObj.fastSetValueAt(i, fieldValue);  // Direct update - avoids indexOf() lookup
@@ -1090,7 +1108,10 @@ public class MapResolver extends Resolver {
 
     /**
      * A constant of an enum other than a simple one stays JSON (see {@link #isValueClass}); a value type is its value.
-     * An EnumSet is read as before.
+     * An EnumSet is read as before. A value that does not convert -- {"@type":"BigDecimal","value":"abc"}, a constant
+     * its enum does not have -- stays the JSON that holds it, as written: this mode reads JSON it may not be the
+     * author of, and the value is still there, unchanged, to read or write back. It failed the read; in Java mode it
+     * is an error still.
      */
     @Override
     protected Object convertIfNonRefType(JsonObject jsonObj, Class<?> type) {
@@ -1098,7 +1119,14 @@ public class MapResolver extends Resolver {
         if (enumClass != null && !isEnumSet(jsonObj) && !isSimpleEnum(enumClass)) {
             return null;
         }
-        return super.convertIfNonRefType(jsonObj, type);
+        try {
+            return super.convertIfNonRefType(jsonObj, type);
+        } catch (RuntimeException e) {
+            if (isEnumSet(jsonObj)) {
+                throw e;    // an EnumSet holding a name its enum does not have: read as a set of strings, it failed worse
+            }
+            return null;
+        }
     }
 
     protected Object resolveArray(Type suggestedType, List<Object> list) {
