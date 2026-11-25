@@ -525,35 +525,49 @@ class InjectorDifferentialTest {
                     what + " <- " + foreign + ": expected " + expected + " but the field holds " + oracle.get(target));
         }
 
-        // 3. a long
-        long longValue = (Long) randomValue(long.class, random);
-        before = oracle.get(target);
-        expected = fromLong(type, longValue);
-        assertEquals(expected != NOT_INJECTED, injector.injectLong(target, longValue), what + " <- " + longValue);
-        assertEquals(expected == NOT_INJECTED ? before : expected, oracle.get(target), what + " <- " + longValue);
+        // 3. a long: any long, a small one, and one at each side of the ends of an int, a short and a byte
+        long[] longs = {(Long) randomValue(long.class, random), random.nextInt(600) - 300L,
+                Integer.MAX_VALUE - 1L + random.nextInt(3), Integer.MIN_VALUE - 1L + random.nextInt(3),
+                Short.MAX_VALUE - 1L + random.nextInt(3), Byte.MIN_VALUE - 1L + random.nextInt(3)};
+        for (long longValue : longs) {
+            before = oracle.get(target);
+            expected = fromLong(type, longValue);
+            assertEquals(expected != NOT_INJECTED, injector.injectLong(target, longValue), what + " <- " + longValue);
+            assertEquals(expected == NOT_INJECTED ? before : expected, oracle.get(target), what + " <- " + longValue);
+        }
 
-        // 4. a double
-        double doubleValue = (Double) randomValue(double.class, random);
-        before = oracle.get(target);
-        expected = fromDouble(type, doubleValue);
-        assertEquals(expected != NOT_INJECTED, injector.injectDouble(target, doubleValue),
-                what + " <- " + doubleValue);
-        assertEquals(expected == NOT_INJECTED ? before : expected, oracle.get(target), what + " <- " + doubleValue);
+        // 4. a double: any double, a small one, and one around each end of an int and of a long
+        double[] doubles = {(Double) randomValue(double.class, random), random.nextInt(600) - 300 + random.nextDouble(),
+                2147483647.0 + random.nextInt(3) - 0.5, -2147483648.0 - random.nextInt(3) + 0.5,
+                random.nextBoolean() ? 0x1p63 : Math.nextDown(0x1p63), random.nextBoolean() ? -0x1p63 : Math.nextDown(-0x1p63),
+                random.nextBoolean() ? 3.4e38 : 3.5e38};
+        for (double doubleValue : doubles) {
+            before = oracle.get(target);
+            expected = fromDouble(type, doubleValue);
+            assertEquals(expected != NOT_INJECTED, injector.injectDouble(target, doubleValue),
+                    what + " <- " + doubleValue);
+            assertEquals(expected == NOT_INJECTED ? before : expected, oracle.get(target), what + " <- " + doubleValue);
+        }
     }
 
-    /** What injectLong leaves in a field of this type: the long narrowed or widened as a Java cast does it. */
+    /**
+     * What injectLong leaves in a field of this type: the long itself where it fits, widened for a float or a
+     * double. 4.119.0: a long that does not fit an int, a short or a byte is not injected -- it was cast, which
+     * wraps it (2147483648 into an int was -2147483648) -- and goes to the general path, where the Converter
+     * refuses it.
+     */
     private static Object fromLong(Class<?> type, long v) {
         if (type == long.class || type == Long.class) {
             return v;
         }
         if (type == int.class || type == Integer.class) {
-            return (int) v;
+            return v >= Integer.MIN_VALUE && v <= Integer.MAX_VALUE ? (Object) (int) v : NOT_INJECTED;
         }
         if (type == short.class || type == Short.class) {
-            return (short) v;
+            return v >= Short.MIN_VALUE && v <= Short.MAX_VALUE ? (Object) (short) v : NOT_INJECTED;
         }
         if (type == byte.class || type == Byte.class) {
-            return (byte) v;
+            return v >= Byte.MIN_VALUE && v <= Byte.MAX_VALUE ? (Object) (byte) v : NOT_INJECTED;
         }
         if (type == float.class || type == Float.class) {
             return (float) v;
@@ -564,19 +578,25 @@ class InjectorDifferentialTest {
         return NOT_INJECTED;
     }
 
-    /** What injectDouble leaves in a field of this type; a short or byte field is left to the general path. */
+    /**
+     * What injectDouble leaves in a field of this type; a short or byte field is left to the general path.
+     * 4.119.0: so is a double that the field cannot hold -- past a long or an int once its fraction is dropped, NaN
+     * for either, or finite and past a float. Each was cast, which pins it to the nearest end (1e300 into a long was
+     * Long.MAX_VALUE, NaN into an int was 0, 1e39 into a float was Infinity).
+     */
     private static Object fromDouble(Class<?> type, double v) {
         if (type == double.class || type == Double.class) {
             return v;
         }
         if (type == float.class || type == Float.class) {
-            return (float) v;
+            return Math.abs(v) <= Float.MAX_VALUE || Double.isNaN(v) || Double.isInfinite(v)
+                    || !Float.isInfinite((float) v) ? (Object) (float) v : NOT_INJECTED;
         }
         if (type == long.class || type == Long.class) {
-            return (long) v;
+            return v >= -9.223372036854775808E18 && v < 9.223372036854775808E18 ? (Object) (long) v : NOT_INJECTED;
         }
         if (type == int.class || type == Integer.class) {
-            return (int) v;
+            return v > -2147483649.0 && v < 2147483648.0 ? (Object) (int) v : NOT_INJECTED;
         }
         return NOT_INJECTED;
     }

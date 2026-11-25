@@ -3111,16 +3111,20 @@ public abstract class Resolver {
         if (targetKind == TARGET_OTHER) {
             return null;
         }
+        // A number that does not fit the target is not cast here: a cast wraps a long (2147483648 into an int is
+        // -2147483648, 70000 into a short is 4464) and pins a double to the nearest end (3.9e9 into an int is
+        // 2147483647, 1e300 into a long is Long.MAX_VALUE), silently. Null sends it on to the Converter, which
+        // refuses it by name and range. A fraction is still dropped toward zero (1.9 is 1), as the Converter does.
         if (valueClass == Long.class) {
             long v = (Long) value;
             switch (targetKind) {
                 case TARGET_LONG: return value;
-                case TARGET_INT: return (int) v;
+                case TARGET_INT: return (int) v == v ? (Object) (int) v : null;
                 case TARGET_DOUBLE: return (double) v;
-                case TARGET_BYTE: return (byte) v;
+                case TARGET_BYTE: return (byte) v == v ? (Object) (byte) v : null;
                 case TARGET_FLOAT: return (float) v;
-                case TARGET_SHORT: return (short) v;
-                case TARGET_CHAR: return (char) v;
+                case TARGET_SHORT: return (short) v == v ? (Object) (short) v : null;
+                case TARGET_CHAR: return (char) v == v ? (Object) (char) v : null;
                 default: return null;
             }
         }
@@ -3128,12 +3132,12 @@ public abstract class Resolver {
             double v = (Double) value;
             switch (targetKind) {
                 case TARGET_DOUBLE: return value;
-                case TARGET_FLOAT: return (float) v;
-                case TARGET_LONG: return (long) v;
-                case TARGET_INT: return (int) v;
-                case TARGET_SHORT: return (short) v;
-                case TARGET_BYTE: return (byte) v;
-                case TARGET_CHAR: return (char) ((int) v);
+                case TARGET_FLOAT: return fitsFloat(v) ? (Object) (float) v : null;
+                case TARGET_LONG: return fitsLong(v) ? (Object) (long) v : null;
+                case TARGET_INT: return fitsWhole(v, Integer.MIN_VALUE, Integer.MAX_VALUE) ? (Object) (int) v : null;
+                case TARGET_SHORT: return fitsWhole(v, Short.MIN_VALUE, Short.MAX_VALUE) ? (Object) (short) v : null;
+                case TARGET_BYTE: return fitsWhole(v, Byte.MIN_VALUE, Byte.MAX_VALUE) ? (Object) (byte) v : null;
+                case TARGET_CHAR: return fitsWhole(v, Character.MIN_VALUE, Character.MAX_VALUE) ? (Object) (char) ((int) v) : null;
                 default: return null;
             }
         }
@@ -3152,8 +3156,24 @@ public abstract class Resolver {
         return null;
     }
 
+    /** Whether {@code v}, its fraction dropped toward zero, lies within {@code min..max}. NaN does not. */
+    static boolean fitsWhole(double v, int min, int max) {
+        return v > min - 1.0 && v < max + 1.0;
+    }
+
+    /** Whether {@code v}, its fraction dropped toward zero, is a long. NaN and the infinities are not. */
+    static boolean fitsLong(double v) {
+        return v >= -0x1p63 && v < 0x1p63;
+    }
+
+    /** Whether {@code v} is a float: within its range, or not a finite number to begin with (NaN, an infinity). */
+    static boolean fitsFloat(double v) {
+        return !Float.isInfinite((float) v) || Double.isInfinite(v);
+    }
+
     /**
-     * Fast array assignment for parsed scalar values, avoiding wrapper churn for primitive arrays.
+     * Fast array assignment for parsed scalar values, avoiding wrapper churn for primitive arrays. A number that
+     * does not fit the element type is not assigned (false): see {@link #fastScalarCoercion}.
      */
     protected static boolean tryAssignParsedScalarToArray(
             Object array, Object[] refArray, int index, Object element, Class<?> elementClass, boolean isPrimitive, int targetKind) {
@@ -3165,12 +3185,12 @@ public abstract class Resolver {
                 long v = (Long) element;
                 switch (targetKind) {
                     case TARGET_LONG: ((long[]) array)[index] = v; return true;
-                    case TARGET_INT: ((int[]) array)[index] = (int) v; return true;
+                    case TARGET_INT: if ((int) v != v) return false; ((int[]) array)[index] = (int) v; return true;
                     case TARGET_DOUBLE: ((double[]) array)[index] = (double) v; return true;
-                    case TARGET_BYTE: ((byte[]) array)[index] = (byte) v; return true;
+                    case TARGET_BYTE: if ((byte) v != v) return false; ((byte[]) array)[index] = (byte) v; return true;
                     case TARGET_FLOAT: ((float[]) array)[index] = (float) v; return true;
-                    case TARGET_SHORT: ((short[]) array)[index] = (short) v; return true;
-                    case TARGET_CHAR: ((char[]) array)[index] = (char) v; return true;
+                    case TARGET_SHORT: if ((short) v != v) return false; ((short[]) array)[index] = (short) v; return true;
+                    case TARGET_CHAR: if ((char) v != v) return false; ((char[]) array)[index] = (char) v; return true;
                     default: return false;
                 }
             }
@@ -3178,12 +3198,20 @@ public abstract class Resolver {
                 double v = (Double) element;
                 switch (targetKind) {
                     case TARGET_DOUBLE: ((double[]) array)[index] = v; return true;
-                    case TARGET_FLOAT: ((float[]) array)[index] = (float) v; return true;
-                    case TARGET_LONG: ((long[]) array)[index] = (long) v; return true;
-                    case TARGET_INT: ((int[]) array)[index] = (int) v; return true;
-                    case TARGET_SHORT: ((short[]) array)[index] = (short) v; return true;
-                    case TARGET_BYTE: ((byte[]) array)[index] = (byte) v; return true;
-                    case TARGET_CHAR: ((char[]) array)[index] = (char) ((int) v); return true;
+                    case TARGET_FLOAT: if (!fitsFloat(v)) return false; ((float[]) array)[index] = (float) v; return true;
+                    case TARGET_LONG: if (!fitsLong(v)) return false; ((long[]) array)[index] = (long) v; return true;
+                    case TARGET_INT:
+                        if (!fitsWhole(v, Integer.MIN_VALUE, Integer.MAX_VALUE)) return false;
+                        ((int[]) array)[index] = (int) v; return true;
+                    case TARGET_SHORT:
+                        if (!fitsWhole(v, Short.MIN_VALUE, Short.MAX_VALUE)) return false;
+                        ((short[]) array)[index] = (short) v; return true;
+                    case TARGET_BYTE:
+                        if (!fitsWhole(v, Byte.MIN_VALUE, Byte.MAX_VALUE)) return false;
+                        ((byte[]) array)[index] = (byte) v; return true;
+                    case TARGET_CHAR:
+                        if (!fitsWhole(v, Character.MIN_VALUE, Character.MAX_VALUE)) return false;
+                        ((char[]) array)[index] = (char) ((int) v); return true;
                     default: return false;
                 }
             }

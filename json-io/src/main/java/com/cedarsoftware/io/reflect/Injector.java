@@ -361,13 +361,24 @@ public class Injector {
                 case NUM_LONG:
                     injectAsLong(object, value);
                     return true;
+                // A long that does not fit the field is not cast into it: (int) 2147483648 is -2147483648 and
+                // (short) 70000 is 4464, silently. False sends it on to the Converter, which refuses it.
                 case NUM_INT:
+                    if ((int) value != value) {
+                        return false;
+                    }
                     injectAsInt(object, (int) value);
                     return true;
                 case NUM_SHORT:
+                    if ((short) value != value) {
+                        return false;
+                    }
                     injectAsShort(object, (short) value);
                     return true;
                 case NUM_BYTE:
+                    if ((byte) value != value) {
+                        return false;
+                    }
                     injectAsByte(object, (byte) value);
                     return true;
                 case NUM_FLOAT:
@@ -397,13 +408,26 @@ public class Injector {
                 case NUM_DOUBLE:
                     injectAsDouble(object, value);
                     return true;
+                // A double past the field's range is not cast into it: (int) 3.9e9 is 2147483647 and (long) 1e300
+                // is Long.MAX_VALUE, silently, and 1e39 is an infinite float. False sends it on to the Converter,
+                // which refuses it. A fraction is dropped toward zero, as before; NaN and an infinity stay what
+                // they are in a float.
                 case NUM_FLOAT:
+                    if (Float.isInfinite((float) value) && !Double.isInfinite(value)) {
+                        return false;
+                    }
                     injectAsFloat(object, (float) value);
                     return true;
                 case NUM_LONG:
+                    if (!(value >= -0x1p63 && value < 0x1p63)) {
+                        return false;
+                    }
                     injectAsLong(object, (long) value);
                     return true;
                 case NUM_INT:
+                    if (!(value > -2147483649.0 && value < 2147483648.0)) {
+                        return false;
+                    }
                     injectAsInt(object, (int) value);
                     return true;
                 default:
