@@ -1,6 +1,8 @@
 ### Revision History
 
 #### 4.119.0 - (unreleased)
+> **If your application calls java-util's `EncryptionUtilities.decrypt()`, read this.** json-io 4.119.0 brings java-util 4.119.0 with it, and there `decrypt()` no longer reads data that java-util 3.3.2 or earlier encrypted (before June 2025): that older format cannot tell when a ciphertext has been tampered with. If you still hold such data, start the application with `-Dencryptionutilities.legacy.decrypt.enabled=true` and it reads exactly as before; nothing is lost. json-io does not use `decrypt()` itself. The full note is at the top of java-util's [changelog](https://github.com/jdereg/java-util/blob/master/changelog.md).
+
 **Upgrading from 4.118.0 -- what can change a result.** The entries below have the details; java-util 4.119.0 has its own table: see java-util's [changelog](https://github.com/jdereg/java-util/blob/master/changelog.md).
 
 | Area | 4.118.0 | 4.119.0 |
