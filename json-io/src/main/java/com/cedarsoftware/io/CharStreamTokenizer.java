@@ -425,11 +425,12 @@ final class CharStreamTokenizer extends JsonTokenizer {
         return JsonToken.VALUE_NUMBER_FLOAT;
     }
 
+    // The two big results set no longValue / doubleValue: every accessor reads a BIG_INTEGER or BIG_DECIMAL token
+    // from the big value itself. Deriving them cost each such token a BigDecimal.longValue() (a division and two
+    // objects for anything with a fraction) and a doubleValue() that the tree read never asked for.
     private JsonToken setBigIntegerResult(BigInteger bi) {
         currentText = null;
         bigIntegerValue = bi;
-        longValue = bi.longValue();
-        doubleValue = bi.doubleValue();
         bigDecimalValue = null;
         numberType = NumberType.BIG_INTEGER;
         currentToken = JsonToken.VALUE_NUMBER_INT;
@@ -439,8 +440,6 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private JsonToken setBigDecimalResult(BigDecimal bd) {
         currentText = null;
         bigDecimalValue = bd;
-        doubleValue = bd.doubleValue();
-        longValue = bd.longValue();
         bigIntegerValue = null;
         numberType = NumberType.BIG_DECIMAL;
         currentToken = JsonToken.VALUE_NUMBER_FLOAT;
