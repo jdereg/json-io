@@ -142,7 +142,8 @@ class JsonParser {
                 readOptions.isFloatingPointBoth(),
                 readOptions.getStringBufferSize(),
                 null,
-                stringCache);
+                stringCache,
+                converter);
     }
 
     /**

@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.internal.DoubleDecimal;
 import com.cedarsoftware.util.internal.FloatDecimal;
 import com.cedarsoftware.util.internal.VectorizedArrays;
@@ -102,6 +103,8 @@ final class CharStreamTokenizer extends JsonTokenizer {
     private final boolean floatingPointBigDecimal;
     private final boolean floatingPointBoth;
     private final Object sourceRef;
+    // The read's Converter: a decimal token's whole part (getBigIntegerValue) is taken by it, so with its bounds.
+    private final Converter converter;
 
     // Cursor / state-machine fields.
     private static final byte CTX_OBJECT = 1;
@@ -139,7 +142,8 @@ final class CharStreamTokenizer extends JsonTokenizer {
     /**
      * Build a tokenizer over the given char input, with all tokenization-policy
      * flags supplied explicitly. Tests construct directly via this constructor
-     * so they don't need a {@link ReadOptions} instance.
+     * so they don't need a {@link ReadOptions} instance: it has a string cache of
+     * its own and the default ReadOptions' Converter.
      */
     CharStreamTokenizer(FastReader input,
                         boolean strictJson,
@@ -151,12 +155,15 @@ final class CharStreamTokenizer extends JsonTokenizer {
                         int stringBufferSize,
                         Object sourceRef) {
         this(input, strictJson, allowNanAndInfinity, integerTypeBigInteger, integerTypeBoth, floatingPointBigDecimal,
-                floatingPointBoth, stringBufferSize, sourceRef, null);
+                floatingPointBoth, stringBufferSize, sourceRef, null,
+                ReadOptionsBuilder.converterOf(ReadOptionsBuilder.getDefaultReadOptions()));
     }
 
     /**
      * @param stringCache the string cache to use, {@link #STRING_CACHE_SIZE} long -- a pooled one, whose entries may
      *                    be from earlier documents -- or null for a new one.
+     * @param converter   the read's Converter: {@link #getBigIntegerValue()} takes a decimal token's whole part by
+     *                    it, so within its limit on the digits an exponent may name.
      */
     CharStreamTokenizer(FastReader input,
                         boolean strictJson,
@@ -167,7 +174,8 @@ final class CharStreamTokenizer extends JsonTokenizer {
                         boolean floatingPointBoth,
                         int stringBufferSize,
                         Object sourceRef,
-                        String[] stringCache) {
+                        String[] stringCache,
+                        Converter converter) {
         this.stringCacheArray = stringCache != null ? stringCache : new String[STRING_CACHE_SIZE];
         this.input = input;
         this.strictJson = strictJson;
@@ -178,6 +186,7 @@ final class CharStreamTokenizer extends JsonTokenizer {
         this.floatingPointBoth = floatingPointBoth;
         this.strBuf = new StringBuilder(stringBufferSize);
         this.sourceRef = sourceRef;
+        this.converter = converter;
     }
 
     // -------------------------------------------------------------------
@@ -609,12 +618,33 @@ final class CharStreamTokenizer extends JsonTokenizer {
             return bigIntegerValue;
         }
         if (numberType == NumberType.BIG_DECIMAL) {
-            return bigDecimalValue.toBigInteger();
+            return wholePart(bigDecimalValue);
         }
         if (numberType == NumberType.DOUBLE || numberType == NumberType.FLOAT) {
-            return BigDecimal.valueOf(doubleValue).toBigInteger();
+            if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
+                error("Numeric value " + doubleValue + " out of range of BigInteger");
+            }
+            // doubleValue holds a FLOAT widened; (float) is the float it was.
+            return wholePart(numberType == NumberType.DOUBLE ? (Object) doubleValue : (Object) (float) doubleValue);
         }
         return BigInteger.valueOf(longValue);
+    }
+
+    /**
+     * A decimal token's whole part (toward zero), taken by the read's Converter and so within its bounds.
+     * BigDecimal.toBigInteger() builds the number an exponent names: it multiplies by 10 to the power of the
+     * exponent, or divides by it to find that a fraction's whole part is 0. The token 1e30000000, like
+     * 1e-30000000, held the calling thread for 3.6 seconds, and 1e600000000 for five minutes and 237 MB (JDK 25).
+     * The Converter answers 0 for a fraction at once, and refuses a whole part that an exponent expands past
+     * ConverterOptions.getMaxPlainDigits() digits (1,000) from its digit count. A double's whole part is that of
+     * the decimal the double prints, the same on every JDK.
+     */
+    private BigInteger wholePart(Object decimal) throws JsonParseException {
+        try {
+            return converter.convert(decimal, BigInteger.class);
+        } catch (IllegalArgumentException e) {
+            return (BigInteger) error(e.getMessage(), e);
+        }
     }
 
     @Override
@@ -627,6 +657,9 @@ final class CharStreamTokenizer extends JsonTokenizer {
             return new BigDecimal(bigIntegerValue);
         }
         if (numberType == NumberType.DOUBLE || numberType == NumberType.FLOAT) {
+            if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
+                error("Numeric value " + doubleValue + " out of range of BigDecimal");
+            }
             ensureNumericText();
             return new BigDecimal(currentText);
         }

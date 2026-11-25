@@ -167,12 +167,25 @@ public abstract class JsonTokenizer implements Closeable {
     public abstract double getDoubleValue() throws IOException;
 
     /**
+     * The current number token as a {@link BigInteger}. A decimal token gives its whole part, toward zero
+     * ({@code 2.9} is 2, {@code -2.9} is -2, {@code 1e-9} is 0), as the read's Converter takes it: the same on
+     * every JDK for a double, and never built from an exponent alone. A decimal read as a {@link BigDecimal}
+     * ({@code floatPointBigDecimal()}, {@code floatPointBoth()}) whose exponent expands its whole part past
+     * {@code ConverterOptions.getMaxPlainDigits()} digits (1,000) is refused from its digit count:
+     * {@code 1e999999999} is 11 characters of input and a billion digits written out.
+     * {@link #getDecimalValue()} and {@link #getNumberValue()} give such a token as written.
+     *
      * @return the current number token's value as a {@link BigInteger}
+     * @throws IOException        on I/O error
+     * @throws JsonParseException if the current token is not a number, is NaN or an infinity, or is a decimal
+     *                            whose exponent names more whole digits than the limit
      */
     public abstract BigInteger getBigIntegerValue() throws IOException;
 
     /**
      * @return the current number token's value as a {@link BigDecimal}
+     * @throws IOException        on I/O error
+     * @throws JsonParseException if the current token is not a number, or is NaN or an infinity
      */
     public abstract BigDecimal getDecimalValue() throws IOException;
 

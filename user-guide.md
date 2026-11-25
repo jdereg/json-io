@@ -1853,6 +1853,8 @@ try (JsonTokenizer t = JsonIo.createTokenizer(jsonString)) {
 
 Factories: `createTokenizer(String)`, `createTokenizer(InputStream)`, plus `ReadOptions`-aware overloads. The tokenizer respects `strictJson`, `allowNanAndInfinity`, `integerTypeBigInteger`, `floatingPointBigDecimal`, and `stringBufferSize` from the supplied options.
 
+`getBigIntegerValue()` on a decimal token gives its whole part, toward zero (`2.9` is 2, `1e-9` is 0), as the read's Converter takes it. A decimal read as a `BigDecimal` (`floatPointBigDecimal()`, `floatPointBoth()`) whose exponent would expand its whole part past 1,000 digits -- `1e999999999` is 11 characters of input and a billion digits written out -- is refused with a `JsonParseException`, not built. The limit is the Converter's `getMaxPlainDigits()`, the one a tree read's conversions have. `getDecimalValue()` and `getNumberValue()` return such a token as it was written.
+
 ### `JsonIo.createGenerator(...)` — streaming write
 
 ```java

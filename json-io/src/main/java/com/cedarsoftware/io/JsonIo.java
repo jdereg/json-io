@@ -1175,7 +1175,8 @@ public class JsonIo {
                 opts.isFloatingPointBoth(),
                 opts.getStringBufferSize(),
                 sourceRef,
-                strings);
+                strings,
+                ReadOptionsBuilder.converterOf(opts));
         // Return exactly the buffers this tokenizer borrowed (ownership-aware release).
         tokenizer.setCloseHook(() -> {
             recycler.releaseReaderBuffers(readerBuf, pushbackBuf);
