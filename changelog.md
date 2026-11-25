@@ -1,5 +1,7 @@
 ### Revision History
 
+#### 4.119.0 - (unreleased)
+* **BUILD**: `java-util` 4.118.0 → **4.119.0**, its next development version: json-io depends on the java-util of its own version number. Until java-util 4.119.0 is released, build it locally first (`mvn install -DskipTests` in java-util).
 #### 4.118.0 - 2026-10-26
 **Upgrading from 4.117.0 -- what can change a result.** Each row is pinned by `UpgradeTo4118NotesTest`; every
 example gave the 4.117.0 answer shown. json-io reads and converts through java-util, whose 4.118.0 has its own table
