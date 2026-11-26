@@ -321,22 +321,6 @@ public class ToonReader {
         return substring;
     }
 
-    private static String trimSpaces(String text) {
-        int start = 0;
-        int len = text.length();
-        int end = len;
-        if (start < end && text.charAt(start) != ' ' && text.charAt(end - 1) != ' ') {
-            return text;
-        }
-        while (start < end && text.charAt(start) == ' ') {
-            start++;
-        }
-        while (end > start && text.charAt(end - 1) == ' ') {
-            end--;
-        }
-        return (start == 0 && end == len) ? text : text.substring(start, end);
-    }
-
     /**
      * Read the complete TOON value.
      *
