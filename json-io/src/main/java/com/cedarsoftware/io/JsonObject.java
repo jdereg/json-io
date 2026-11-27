@@ -389,11 +389,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>, Serial
         return size;
     }
 
-    @Deprecated
-    public int getLength() {
-        return size();
-    }
-
     @Override
     public boolean isEmpty() {
         return size() == 0;

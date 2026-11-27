@@ -229,15 +229,6 @@ public abstract class JsonValue {
     }
 
     /**
-     * Do not use this method.  Call getType() or getRawType() instead.
-     * @deprecated This method will be removed in a future version. Use getRawType() instead.
-     */
-    @Deprecated
-    public Class<?> getJavaType() {
-        return getRawType();
-    }
-
-    /**
      * Sets the maximum size of the type resolution cache.
      * This affects all JsonValue instances as the cache is static.
      * 

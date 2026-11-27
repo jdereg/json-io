@@ -278,17 +278,6 @@ class JsonObjectMethodsTest {
         assertFalse(one.equals(two));
     }
 
-    // ========== Deprecated Method Tests ==========
-
-    @Test
-    @SuppressWarnings("deprecation")
-    void testGetLengthDelegatesToSize() {
-        JsonObject obj = new JsonObject();
-        obj.put("a", 1);
-        obj.put("b", 2);
-        assertEquals(2, obj.getLength());
-    }
-
     // ========== Coverage Tests for data[] unification ==========
 
     @Test

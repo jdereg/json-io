@@ -109,23 +109,6 @@ public class Writers {
     }
 
     /**
-     * <b>Deprecated</b> — use {@link #writeWithStringFormat(Object, JsonGenerator, WriterContext)}.
-     * If the WriterContext has a field format pattern containing '%' (C-style String.format),
-     * format the value using String.format() and write as a quoted JSON string.
-     * Returns true if handled, false otherwise.
-     */
-    @Deprecated
-    public static boolean writeWithStringFormat(Object o, Writer output, WriterContext context) throws IOException {
-        String pat = context.getFieldFormatPattern();
-        if (pat != null && pat.indexOf('%') >= 0) {
-            CharStreamGenerator.writeBasicString(output, String.format(pat, o));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * {@link JsonGenerator}-based form of {@link #writeWithStringFormat(Object, Writer, WriterContext)}.
      * If the WriterContext has a field format pattern containing '%' (C-style String.format),
      * format the value using String.format() and write as a quoted JSON string.
      * Returns true if handled, false otherwise.
@@ -142,23 +125,6 @@ public class Writers {
     }
 
     /**
-     * <b>Deprecated</b> — use {@link #writeNumericWithFieldFormat(Object, JsonGenerator, WriterContext)}.
-     * If the WriterContext has a field format pattern and the value is a Number,
-     * format it using DecimalFormat and write as a quoted JSON string. Returns true if handled.
-     */
-    @Deprecated
-    public static boolean writeNumericWithFieldFormat(Object o, Writer output, WriterContext context) throws IOException {
-        String pat = context.getFieldFormatPattern();
-        if (pat != null && o instanceof Number) {
-            DecimalFormat df = new DecimalFormat(pat);
-            CharStreamGenerator.writeBasicString(output, df.format(o));
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * {@link JsonGenerator}-based form of {@link #writeNumericWithFieldFormat(Object, Writer, WriterContext)}.
      * If the WriterContext has a field format pattern and the value is a Number,
      * format it using DecimalFormat and write as a quoted JSON string. Returns true if handled.
      *

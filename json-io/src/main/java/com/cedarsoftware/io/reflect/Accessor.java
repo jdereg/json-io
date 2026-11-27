@@ -96,62 +96,6 @@ public class Accessor {
     private final byte primitiveKind;
     private volatile boolean handleFailed;      // a field's handle threw: Field.get is used from then on
 
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface BooleanGetter {
-        boolean get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface ByteGetter {
-        byte get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface CharGetter {
-        char get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface ShortGetter {
-        short get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface IntGetter {
-        int get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface LongGetter {
-        long get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface FloatGetter {
-        float get(Object target);
-    }
-
-    /** @deprecated Not used by json-io since 4.114.0. Kept so that code naming it still compiles. */
-    @Deprecated
-    @FunctionalInterface
-    public interface DoubleGetter {
-        double get(Object target);
-    }
-
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName,
                      boolean isPublic, boolean isMethod) {
         this.field = field;

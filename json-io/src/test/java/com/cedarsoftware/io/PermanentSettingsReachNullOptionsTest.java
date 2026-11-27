@@ -371,7 +371,6 @@ class PermanentSettingsReachNullOptionsTest {
         Map<String, Runnable> read = new LinkedHashMap<>();
         ClassFactory factory = new ClassFactory() { };
         read.put("addPermanentClassFactory", () -> ReadOptionsBuilder.addPermanentClassFactory(Probe.class, factory));
-        read.put("assignInstantiator", () -> ReadOptionsBuilder.assignInstantiator(Probe.class, factory));
         read.put("addPermanentCoercedType", () -> ReadOptionsBuilder.addPermanentCoercedType(Probe.class, Probe.class));
         read.put("addPermanentAlias", () -> ReadOptionsBuilder.addPermanentAlias(Probe.class, "permanentProbe"));
         read.put("removePermanentAliasTypeNamesMatching",
@@ -417,8 +416,7 @@ class PermanentSettingsReachNullOptionsTest {
         TreeSet<String> names = new TreeSet<>();
         for (Method method : builder.getDeclaredMethods()) {
             String name = method.getName();
-            boolean permanent = name.startsWith("addPermanent") || name.startsWith("removePermanent")
-                    || name.equals("assignInstantiator");
+            boolean permanent = name.startsWith("addPermanent") || name.startsWith("removePermanent");
             boolean onePrimitive = method.getParameterCount() == 1 && method.getParameterTypes()[0].isPrimitive();
             if (permanent && !onePrimitive && Modifier.isStatic(method.getModifiers())
                     && Modifier.isPublic(method.getModifiers())) {

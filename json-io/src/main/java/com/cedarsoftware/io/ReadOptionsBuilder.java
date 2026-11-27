@@ -408,18 +408,6 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param classToCreate Class that will need to use a ClassFactory for instantiation and loading.
-     * @param factory       ClassFactory instance that has been created to instantiate a difficult
-     *                      to create and load class (class c).
-     * @deprecated use {@link ReadOptionsBuilder#addPermanentClassFactory} instead.
-     */
-    @Deprecated
-    public static void assignInstantiator(Class<?> classToCreate, ClassFactory factory) {
-        CLASS_FACTORIES.change(factories -> factories.put(classToCreate, factory));
-        permanentSettingMade();
-    }
-
-    /**
      * Call this method to add a permanent (JVM lifetime) coercion of one
      * class to another during instance creation.  Examples of classes
      * that might need this are proxied classes such as HibernateBags, etc.

@@ -3418,23 +3418,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
     }
 
     /**
-     * Writes a quoted string without escape-scanning the content. Use for labels and inputs
-     * known a-priori to be JSON-safe (no embedded {@code "}, {@code \\}, or control chars).
-     *
-     * @param writer Writer to which the quoted string is written
-     * @param s      String to write — must be JSON-safe
-     * @throws IOException if an error occurs writing to the output stream
-     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
-     *             Internal callers route there directly; external callers should switch to
-     *             {@link JsonGenerator#writeString(String)} via {@link JsonIo#createGenerator}
-     *             for the full state-machine-aware API, or accept the deprecation warning here.
-     */
-    @Deprecated
-    public static void writeBasicString(final Writer writer, String s) throws IOException {
-        CharStreamGenerator.writeBasicString(writer, s);
-    }
-
-    /**
      * Writes {@code s} to {@code output} as a complete JSON string value -- surrounding quotes
      * included, with everything JSON requires escaping escaped.  Uses the default 1MB
      * string-length cap.
@@ -3504,23 +3487,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable {
         // Use single quotes only if string contains double quote and does not contain single quote.
         // indexOf() is intrinsified in modern JDKs and is usually faster than manual char-by-char scans.
         return s.indexOf('"') >= 0 && s.indexOf('\'') < 0;
-    }
-
-    /**
-     * Writes a JSON5 single-quoted string value, properly escaped. In single-quoted form
-     * the single quote is escaped (as {@code \\'}) while the double quote is not — the
-     * inverse of JSON's standard double-quoted form.
-     *
-     * @param output          The Writer to write to
-     * @param s               The string to be written
-     * @param maxStringLength Maximum allowed string length
-     * @throws IOException If an I/O error occurs
-     * @deprecated since 4.103.0; the implementation moved to {@code CharStreamGenerator}.
-     *             See {@link #writeBasicString(Writer, String)} for migration notes.
-     */
-    @Deprecated
-    public static void writeSingleQuotedString(final Writer output, String s, int maxStringLength) throws IOException {
-        CharStreamGenerator.writeSingleQuotedString(output, s, maxStringLength);
     }
 
     // ======================== Context Stack Management ========================

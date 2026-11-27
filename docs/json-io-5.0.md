@@ -33,12 +33,9 @@ today's.
 | Removed | Use instead | Status |
 |---|---|---|
 | `JsonIo.toObjects(...)` (3 overloads) | `JsonIo.toJava(...).asClass(type)` | Announced (javadoc) |
-| `JsonClassWriter.write(T, boolean, Writer, WriterContext)` and `writePrimitiveForm(Object, Writer, WriterContext)`, and the `Writer`-based helpers in `Writers` | The `JsonGenerator` forms ([user guide](/user-guide.md#writing-custom-jsonclasswriter)) | Announced (user guide) |
+| `JsonClassWriter.write(T, boolean, Writer, WriterContext)` and `writePrimitiveForm(Object, Writer, WriterContext)` | The `JsonGenerator` forms ([user guide](/user-guide.md#writing-custom-jsonclasswriter)) | Announced (user guide) |
 | `ReadOptionsBuilder.returnAsNativeJsonObjects()` | `returnAsJsonObjects()` | Proposed (deprecated in 4.x) |
-| `ReadOptionsBuilder.assignInstantiator(...)` | `addPermanentClassFactory(...)` | Proposed (deprecated in 4.x) |
-| `JsonObject.getLength()` | `size()` | Proposed (deprecated in 4.x) |
-| `JsonReader` and its nested `ClassFactory`, `MissingFieldHandler`, `JsonClassReader`; `JsonWriter.JsonClassWriter` | The top-level interfaces of the same names | Proposed (deprecated in 4.x) |
-| `JsonWriter.writeBasicString(...)`, `writeSingleQuotedString(...)` | The `JsonGenerator` string writers | Proposed (deprecated in 4.x) |
+| `JsonReader` and its nested `ClassFactory`, `JsonClassReader`; `JsonWriter.JsonClassWriter` | The top-level interfaces of the same names | Proposed (deprecated in 4.x) |
 
 ## Map mode (Decided)
 

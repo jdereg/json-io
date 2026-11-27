@@ -56,17 +56,6 @@ public class EnumClassFactory implements ClassFactory {
         throw new JsonIoException("Unable to instantiate enum: " + c + ", class not found or is not an Enum.");
     }
 
-    /**
-     * @deprecated Use Converter.convert() instead. This method is retained for backward compatibility
-     * with any subclasses that may override it.
-     */
-    @Deprecated
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    protected Enum fromString(Class<?> c, String s) {
-        return Enum.valueOf((Class<Enum>) c, s);
-    }
-
-
     protected String getEnumName(JsonObject jObj) {
         String name = (String) jObj.get("Enum.name");
         return name != null ? name : (String) jObj.get("name");

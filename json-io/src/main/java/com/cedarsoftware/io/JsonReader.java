@@ -3,12 +3,11 @@ package com.cedarsoftware.io;
 /**
  * Legacy class retained only for backward compatibility.
  * <p>
- * The nested interfaces ({@link ClassFactory}, {@link MissingFieldHandler}, {@link JsonClassReader})
+ * The nested interfaces ({@link ClassFactory}, {@link JsonClassReader})
  * are deprecated and kept only so that existing code referencing {@code JsonReader.ClassFactory} etc.
  * continues to compile. New code should use the top-level interfaces directly:
  * <ul>
  *   <li>{@code JsonReader.ClassFactory} → use {@link ClassFactory}</li>
- *   <li>{@code JsonReader.MissingFieldHandler} → use {@link MissingFieldHandler}</li>
  *   <li>{@code JsonReader.JsonClassReader} → use {@link JsonClassReader}</li>
  * </ul>
  * <p>
@@ -60,14 +59,6 @@ public class JsonReader {
      */
     @Deprecated
     public interface ClassFactory extends com.cedarsoftware.io.ClassFactory {
-    }
-
-    /**
-     * @deprecated Use top-level {@link com.cedarsoftware.io.MissingFieldHandler} instead.
-     *             This nested interface is kept for backward compatibility.
-     */
-    @Deprecated
-    public interface MissingFieldHandler extends com.cedarsoftware.io.MissingFieldHandler {
     }
 
     /**

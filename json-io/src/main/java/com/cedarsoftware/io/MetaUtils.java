@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -20,14 +19,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import com.cedarsoftware.util.CaseInsensitiveMap;
 import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.ExceptionUtilities;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
-import com.cedarsoftware.util.StringUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -423,101 +419,12 @@ public class MetaUtils {
 
     /**
      * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link ClassUtilities#loadResourceAsString(String)} directly instead.
-     */
-    @Deprecated
-    public static String loadResourceAsString(String resourceName) {
-        return ClassUtilities.loadResourceAsString(resourceName);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link ClassUtilities#loadResourceAsBytes(String)} directly instead.
-     */
-    @Deprecated
-    public static byte[] loadResourceAsBytes(String resourceName) {
-        return ClassUtilities.loadResourceAsBytes(resourceName);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * This method has been moved to {@link StringUtilities#removeLeadingAndTrailingQuotes(String)}.
-     */
-    @Deprecated
-    public static String removeLeadingAndTrailingQuotes(String input) {
-        return StringUtilities.removeLeadingAndTrailingQuotes(input);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link ClassUtilities#findClosest(Class, Map, Object)} directly instead.
-     */
-    @Deprecated
-    public static <T> T findClosest(Class<?> clazz, Map<Class<?>, T> workerClasses, T defaultClass) {
-        return ClassUtilities.findClosest(clazz, workerClasses, defaultClass);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use ClassUtilities.setUseUnsafe(boolean) going forward.
-     */
-    @Deprecated
-    public static void setUseUnsafe(boolean state) {
-        ClassUtilities.setUseUnsafe(state);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use ClassUtilities.newInstance(Converter, Class, Collection) going forward.
+     * Use ClassUtilities.newInstance(Converter, Class, Object) going forward: a Collection passed there is the list
+     * of constructor arguments, as here.
      */
     @Deprecated
     public static Object newInstance(Converter converter, Class<?> c, Collection<?> argumentValues) {
         return ClassUtilities.newInstance(converter, c, (Object)argumentValues);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use ExceptionUtilities.safelyIgnoreException(Callable, T)
-     */
-    @Deprecated
-    public static <T> T safelyIgnoreException(Callable<T> callable, T defaultValue) {
-        return ExceptionUtilities.safelyIgnoreException(callable, defaultValue);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use ExceptionUtilities.safelyIgnoreException(Runnable)
-     */
-    @Deprecated
-    public static void safelyIgnoreException(Runnable runnable) {
-        ExceptionUtilities.safelyIgnoreException(runnable);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link StringUtilities#length(String)} to safely determine the length of a string without risking a {@code NullPointerException}.
-     */
-    @Deprecated
-    public static int length(final String s) {
-        return StringUtilities.length(s);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link StringUtilities#trimLength(String)} directly instead.
-     */
-    @Deprecated
-    public static int trimLength(final String s) {
-        return StringUtilities.trimLength(s);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link ClassUtilities#getClassIfEnum(Class)} directly instead.
-     */
-    @Deprecated
-    public static Class<?> getClassIfEnum(Class<?> c) {
-        return ClassUtilities.getClassIfEnum(c);
     }
 
     /**
@@ -527,14 +434,5 @@ public class MetaUtils {
     @Deprecated
     public static boolean isPrimitive(Class<?> c) {
         return ClassUtilities.isPrimitive(c);
-    }
-
-    /**
-     * @deprecated This method is deprecated and will be removed in a future version.
-     * Use {@link ExceptionUtilities#safelyIgnoreException(Runnable)} directly instead.
-     */
-    @Deprecated
-    public static void trySetAccessible(AccessibleObject object) {
-        ExceptionUtilities.safelyIgnoreException(() -> object.setAccessible(true));
     }
 }
